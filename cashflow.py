@@ -141,7 +141,7 @@ for i in range(numMonths):
 
 pinnedRowData=[rowDataDict]
 
-
+#  what
 actualChildren=[{"headerName":"","field":"Tot","minWidth":80}]
 
 for i in range(0,numMonths,1):
