@@ -1,0 +1,12 @@
+Adding a key makes it do some very weird things.
+
+if reload_data=True
+    - change made to a cell value does not persist until the rerun button in clicked.
+    - the difference is detected though and the update is made correctly.
+    - Looks like it reloads data when the rerun is triggered
+        - data is only changed at the end of event-triggered rerun.
+    - reload=False will not reload data automatically - the option we want for this.
+        - actually, doesnt really matter because the rest of the calculated data is only updated
+            after the manual rerun
+
+editing the start or end date is causing the grid to freak out
