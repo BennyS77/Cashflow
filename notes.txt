@@ -1,3 +1,83 @@
+Things to sort out / Questions:
+ 1. difference between valueGetter, valueFormatter and valueParser  DONE
+ 2. can you have multiple 'virtual' columns doing dependent calcs
+        - ie where one calculated column is dependent on another calc column
+        - eg ETC = EAC - ACDT, and then Forecast = ETC/3
+ 3. what is suitable way to load data into the grid?
+
+Answers:
+1.
+    valueGetter (and valueSetter)
+        - custom logic when sourcing data
+        - values to be pulled from anywhere, incl executing expressions
+        - makes 'field' obsolete.
+        - so, for non-editable fields that are calculated from other data
+        - can be used with valueSetter.
+    valueSetter
+        - "after editing a cell, the grid normally inserts the new value into your data
+            using column definition 'field' attribute.
+            - if not possible to use a field attribute, you can provide a valueSetter instead
+    valueFormatter
+        - format the data for display
+        - Will not affect the underlying data. Could cause confusion.
+        - so, 'field' is the data in the column, but it might be formatted to 
+            look like data in another column/field. SO when we reference the column/field,
+            we'll get the 'field' value, not the formatted 'value'.
+    valueParser
+        - used when editing cells.
+        - inverse of valueFormatter - lets you format the field before setting the value
+        - "After editing cells, can parse value before inserting it into your data"
+
+2.
+    No.  If a valueGetter is used to get data for a field (eg ETC) it doesnt have a 'field' attribute
+    and cannot be reference for other calculations. So essentially all calculated fields are going to
+    have to be calculated from scratch - difficult/impossible?!?
+        eg. calculating the forecast percent for future month 3 will need to be done from EAC, ACTD,
+            dates and method.
+    A forecast months' data could very well depend on the forecast months up to that point and so this
+    approach is not going to work
+
+3.
+    Having the grid calculate the columns values is very smooth but won't work due to the complex
+    nature of the forecast calculations.
+    So, maybe...
+    Make the dataframe stateful and update the dataframe to reflect edits made to the grid.
+    Process:
+        A) A cell in the grid is edited eg. method changed to Timeline.
+        b) Streamlit jumps straight back to the start of the script and reruns the whole thing.
+            - dataframe has not changed at this point.
+        c) The grid response after the rerun will include the cell edition, HOWEVER:
+            - If reload_data = True, the unchanged dataframe will be reloaded into the grid
+                - overriding any visual changes to the grid.
+        d) The edited value can be determined (compare dataframe to grid response)
+        e) Update the stateful dataframe based on edited cell.
+            - this will include all related calculations
+                eg. updating method will change date cells and possible many future months' values
+        f) Trigger rerun (manually or otherwise) to update grid with revised values/calculation results.
+            - key effect
+                - when key not used - at the end of the second rerun, the grid is reinitialised using 
+                the updated session state dataframe, and therefore the grid data and the grid
+                response reflect the updated session-state dataframe.
+                - when a key is used - On the second rerun,
+                    the grid is not updated to reflect the updated dataframe and the grid response
+                    doesnt change.
+            - reload_data - the grid data is instantly refreshed from unchanged dataframe. The
+                    grid response reflects the change though and so the session state dataframe is
+                    updated appropriately. ie. It just affects what the user sees, and when the second
+                    rerun happens automatically it will all happen very fast anyway.
+            - with key AND reload_data=True 
+                - worst of both worlds
+
+
+    It is NOT very smooth operation of the grid. Reloading it all the time looks crap.
+    Maybe...
+        Could update the grid using onCellValueChanged event??
+
+
+
+
+General notes:
+
 Key and data_reload
 
 According to Pablo:
@@ -9,27 +89,33 @@ Key
 So, if the dataframe that Ag-grid loads is fixed (ie remains unchanged upon rerun), 
 using a key will make no difference. It's only when the dataframe changes. 
 
-data_reload
+Data_reload
 After an interaction with the grid (eg cell edit), the dataframe will be reloaded
 into the grid. This will cause any edits to be replaced with the dataframe values.
 If we want the change to the grid to persist, set data_reload = False.
 NOTE: editing the grid in no-way changes the dataframe data that is loaded into it.
 
 So
-    reload_data = True
-         - the grid response will include the changed value, but the grid will reload the
-            dataframe and so will look different to the grid output.
-
     reload_data = False
-        - the grid_reponse still includes the changed value, but the value persists in
-            grid itself because the dataframe is not being reloaded.
+        - The edited value persists in grid after the rerun because the dataframe is not being
+        reloaded.  The grid_reponse after the rerun includes the changed value.
+
+    reload_data = True
+         - After a cell is edited, during the rerun the dataframe is reloaded into the grid,
+         visually over-riding the edit that was made. The grid response WILL STILL include the changed
+          value, so the grid and the grid response will look different.
+    
+    In both cases, the difference between the loaded dataframe and the grid response will be the same
+
+    
 
 
-grid response
+Grid Response
 The grid response will only include the columns of the dataframe loaded into it.
-Any columns only defined in gridOptions (eg calculated columns) will not be in the response.
+Columns that are only defined in gridOptions (eg calculated columns) will not be in the response.
 
 User-changeable values that will need to be updated and loaded back into the grid:
     - forecast method.
     - start date / end date
     - forecast monthly percentages
+

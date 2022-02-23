@@ -5,7 +5,7 @@ import requests
 import pandas as pd
 from datetime import datetime
 from dateutil.relativedelta import relativedelta
-from cashflow_jscode import js
+from cashflow_jscode import js, vg_forecastAmount, vg_forecastPercent
 
 st.set_page_config(
      page_title="Premier Reports - Cashflow Report",
@@ -16,16 +16,30 @@ st.set_page_config(
 
 
 # if 'grid_data' not in st.session_state:
-    # st.write("starting from scratch")
-grid_data = pd.DataFrame.from_dict({"EAC":[1000.678,3000],
+    # st.write("initialise dataframe session state with 'actual' data")
+    # st.session_state.grid_data = pd.DataFrame.from_dict(
+grid_data = pd.DataFrame.from_dict(
+                                  {
+                                    "EAC":[1000.678,3000],
                                     "ACTD":[600,800.555],
-                                    "ETC":[0,0],
+                                    # "ETC":[0,0],
                                     "forecastMethod":["Timeline","Manual"],
-                                    "forecast":[0,0],
-                                    })
+                                    "numDays":[40,25],
+                                    "f1Amount":[0,0],
+                                    "f2Amount":[0,0],
+                                    "f1Percent":[0,0],
+                                    "f2Percent":[0,0],
+                                  }
+      )
+ 
+def calcs():
+  grid_data['ETC'] = grid_data.EAC - grid_data.ACTD
+  # grid_data['forecastAmount']=grid_data.apply(lambda x: x.ETC if x.forecastMethod =='Timeline' else 0, axis =1)
 
 
-# st.write(st.session_state.grid_data)
+calcs()
+
+grid_data
 
 dateIsEditable = True
 percentIsEditable = True
@@ -34,7 +48,6 @@ gridOptions={
   "defaultColDef": {
     "minWidth": 50,
     "maxWidth": 100,
-    "editable": True,
     "filter": True,
     "resizable": True,
     "sortable": True
@@ -63,7 +76,7 @@ gridOptions={
         "numericColumn",
         "numberColumnFilter"
         ],
-      "valueFormatter": "parseFloat(data.EAC-data.ACTD).toLocaleString('en',{minimumFractionDigits: 2,  maximumFractionDigits: 2})"
+      "valueFormatter": "parseFloat(value).toLocaleString('en',{minimumFractionDigits: 2,  maximumFractionDigits: 2})"
     },
     { "headerName": "Forecast Method",
       "field": "forecastMethod",
@@ -71,17 +84,49 @@ gridOptions={
       "cellEditor": 'agRichSelectCellEditor',
       "cellEditorParams": {'values': ['Timeline', 'Manual','S-curve'],},
     },
-    { "headerName": "Forecasttt",
-      "field": "forecast",
+    { "headerName": "Num of Days",
+      "field": "numDays",
+      "editable": True,
       "type": [
         "numericColumn",
         "numberColumnFilter"
         ],
-      "valueFormatter": "parseFloat(data.ETC).toLocaleString('en',{minimumFractionDigits: 2,  maximumFractionDigits: 2})"
-
+    },
+    { "headerName": "F1 $",
+      "field": "f1Amount",
+      "type": [
+        "numericColumn",
+        "numberColumnFilter"
+        ],
+      "valueFormatter": "parseFloat(value).toLocaleString('en',{minimumFractionDigits: 2,  maximumFractionDigits: 2})"
+    },
+    { "headerName": "F1 %",
+      "field": "f1Percent",
+      "type": [
+        "numericColumn",
+        "numberColumnFilter"
+        ],
+      "valueFormatter": "parseFloat(value).toLocaleString('en',{minimumFractionDigits: 2,  maximumFractionDigits: 2})"
+    },
+    { "headerName": "F2 $",
+      "field": "f2Amount",
+      "type": [
+        "numericColumn",
+        "numberColumnFilter"
+        ],
+      "valueFormatter": "parseFloat(value).toLocaleString('en',{minimumFractionDigits: 2,  maximumFractionDigits: 2})"
+    },
+    { "headerName": "F2 %",
+      "field": "f2Percent",
+      "type": [
+        "numericColumn",
+        "numberColumnFilter"
+        ],
+      "valueFormatter": "parseFloat(value).toLocaleString('en',{minimumFractionDigits: 2,  maximumFractionDigits: 2})"
     },
   ],
   "debug":True,
+  "onCellValueChanged": js
 }
 
 
@@ -117,25 +162,24 @@ elif use_key == False:
 
 
 
-st.write(grid_response['data'])
+# st.write(grid_response['data'])
 
 diff = grid_response['data'].compare(grid_data)
 st.write(diff)
-
-# col_changed=diff.columns[0]
-# col_to_change=col_changed[0]
-# row_changed=diff.index[0]
-# value=diff.loc[row_changed,col_changed]
-# st.write(diff)
-# st.write(value)
-# st.write(col_changed)
-# st.write(col_to_change)
-# st.write(row_changed)
-    # st.session_state.grid_data.loc[row_changed,col_to_change]=value
+if len(diff) > 0:
+  col_changed=diff.columns[0]
+  col_to_change=col_changed[0]
+  row_changed=diff.index[0]
+  value=diff.loc[row_changed,col_changed]
+  # st.write('new value: ',value)
+  # st.write(col_changed)
+  # st.write('column changed: ', col_to_change)
+  # st.write('row changed: ', row_changed)
+  # st.session_state.grid_data.loc[row_changed,col_to_change]=value
     # calcs()
     # st.experimental_rerun()
 
-# rerun_button = st.button("rerun")
+rerun_button = st.button("rerun")
 
 
 
