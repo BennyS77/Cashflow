@@ -11,7 +11,7 @@ st.set_page_config(
      page_title="Premier Reports - Cashflow Report",
      page_icon="bar-chart",
      layout="wide",
-     initial_sidebar_state="auto" #"collapsed" #auto
+     initial_sidebar_state="collapsed" #"collapsed" #auto
 )
 
 
@@ -20,26 +20,52 @@ st.set_page_config(
     # st.session_state.grid_data = pd.DataFrame.from_dict(
 grid_data = pd.DataFrame.from_dict(
                                   {
-                                    "EAC":[1000.678,3000],
-                                    "ACTD":[600,800.555],
+                                    "costItem":['110','140','210'],
+                                    "EAC":[1000.678,3000,2400.3],
+                                    "ACTD":[600,800.555,222.2],
+                                    "actual_$":[600,800.555,222.2]
                                     # "ETC":[0,0],
-                                    "forecastMethod":["Timeline","Manual"],
-                                    "numDays":[40,25],
-                                    "f1Amount":[0,0],
-                                    "f2Amount":[0,0],
-                                    "f1Percent":[0,0],
-                                    "f2Percent":[0,0],
+                                    # "forecastMethod":["Timeline","Manual"],
+                                    # "numDays":[40,25],
+                                    # "f1Amount":[0,0],
+                                    # "f2Amount":[0,0],
+                                    # "f1Percent":[0,0],
+                                    # "f2Percent":[0,0],
                                   }
       )
- 
+
+actualMonths = 3
+forecastMonths = 3
+numOfDays = 45
+workDaysInMonth = 25
+
 def calcs():
   grid_data['ETC'] = grid_data.EAC - grid_data.ACTD
+  grid_data['forecastMethod'] = 'Timeline'
+  grid_data['numDays'] = numOfDays
+  grid_data['actual_%'] = grid_data['actual_$'] / grid_data['EAC'] * 100
+  percentSoFar = grid_data['actual_%'] / 100
+  dollarsPerDay = grid_data['ETC'] / grid_data['numDays']
+  workDaysLeft = numOfDays
+  for i in range(forecastMonths):
+    if workDaysLeft >= workDaysInMonth:
+      grid_data['Month_'+str(i)+'_$'] = workDaysInMonth*dollarsPerDay
+      grid_data['Month_'+str(i)+'_percent'] = (percentSoFar + (grid_data['Month_'+str(i)+'_$'] / grid_data['EAC']))*100
+      percentSoFar = percentSoFar + (grid_data['Month_'+str(i)+'_$'] / grid_data['EAC'])
+    elif workDaysLeft > 0:
+      grid_data['Month_'+str(i)+'_$'] = workDaysLeft*dollarsPerDay
+      grid_data['Month_'+str(i)+'_percent'] = (percentSoFar + (grid_data['Month_'+str(i)+'_$'] / grid_data['EAC']))*100
+      percentSoFar = percentSoFar + (grid_data['Month_'+str(i)+'_$'] / grid_data['EAC'])
+    else:
+      grid_data['Month_'+str(i)+'_$'] = 0
+      grid_data['Month_'+str(i)+'_percent'] = 0
+    workDaysLeft = workDaysLeft - workDaysInMonth
+
   # grid_data['forecastAmount']=grid_data.apply(lambda x: x.ETC if x.forecastMethod =='Timeline' else 0, axis =1)
 
 
 calcs()
 
-grid_data
 
 dateIsEditable = True
 percentIsEditable = True
@@ -47,12 +73,16 @@ percentIsEditable = True
 gridOptions={
   "defaultColDef": {
     "minWidth": 50,
-    "maxWidth": 100,
+    "maxWidth": 95,
     "filter": True,
     "resizable": True,
     "sortable": True
   },
   "columnDefs": [
+    { "headerName": "Cost Item",
+      "field": "costItem",
+      "maxWidth": 95,
+    },
     { "headerName": "EAC",
       "field": "EAC",
       "editable": True,
@@ -84,40 +114,77 @@ gridOptions={
       "cellEditor": 'agRichSelectCellEditor',
       "cellEditorParams": {'values': ['Timeline', 'Manual','S-curve'],},
     },
-    { "headerName": "Num of Days",
+    { "headerName": "Days",
       "field": "numDays",
+      "editable": True,
+      "maxWidth": 75,
+      "type": [
+        "numericColumn",
+        "numberColumnFilter"
+        ],
+    },
+    { "headerName": "Actual %",
+      "field": "actual_%",
+      "maxWidth": 75,
+      "type": [
+        "numericColumn",
+        "numberColumnFilter"
+        ],
+      "valueFormatter": "parseFloat(value).toLocaleString('en',{minimumFractionDigits: 1,  maximumFractionDigits: 1})"
+    },
+    { "headerName": "Actual $",
+      "field": "actual_$",
+      "maxWidth": 75,
+      "type": [
+        "numericColumn",
+        "numberColumnFilter"
+        ],
+      "valueFormatter": "parseFloat(value).toLocaleString('en',{minimumFractionDigits: 2,  maximumFractionDigits: 2})"
+    },
+    { "headerName": "Mth_0_%",
+      "field": "Month_0_percent",
+      "editable": percentIsEditable,
+      "type": [
+        "numericColumn",
+        "numberColumnFilter"
+        ],
+      "valueFormatter": "parseFloat(value).toLocaleString('en',{minimumFractionDigits: 1,  maximumFractionDigits: 1})"
+    },
+    { "headerName": "Mth_0_$",
+      "field": "Month_0_$",
       "editable": True,
       "type": [
         "numericColumn",
         "numberColumnFilter"
         ],
+      "valueFormatter": "parseFloat(value).toLocaleString('en',{minimumFractionDigits: 2,  maximumFractionDigits: 2})"
     },
-    { "headerName": "F1 $",
-      "field": "f1Amount",
+    { "headerName": "Mth_1_%",
+      "field": "Month_1_percent",
+      "type": [
+        "numericColumn",
+        "numberColumnFilter"
+        ],
+      "valueFormatter": "parseFloat(value).toLocaleString('en',{minimumFractionDigits: 1,  maximumFractionDigits: 1})"
+    },
+    { "headerName": "Mth_1_$",
+      "field": "Month_1_$",
       "type": [
         "numericColumn",
         "numberColumnFilter"
         ],
       "valueFormatter": "parseFloat(value).toLocaleString('en',{minimumFractionDigits: 2,  maximumFractionDigits: 2})"
     },
-    { "headerName": "F1 %",
-      "field": "f1Percent",
+    { "headerName": "Mth_2_%",
+      "field": "Month_2_percent",
       "type": [
         "numericColumn",
         "numberColumnFilter"
         ],
-      "valueFormatter": "parseFloat(value).toLocaleString('en',{minimumFractionDigits: 2,  maximumFractionDigits: 2})"
+      "valueFormatter": "parseFloat(value*100).toLocaleString('en',{minimumFractionDigits: 2,  maximumFractionDigits: 2})"
     },
-    { "headerName": "F2 $",
-      "field": "f2Amount",
-      "type": [
-        "numericColumn",
-        "numberColumnFilter"
-        ],
-      "valueFormatter": "parseFloat(value).toLocaleString('en',{minimumFractionDigits: 2,  maximumFractionDigits: 2})"
-    },
-    { "headerName": "F2 %",
-      "field": "f2Percent",
+    { "headerName": "Mth_2_$",
+      "field": "Month_2_$",
       "type": [
         "numericColumn",
         "numberColumnFilter"

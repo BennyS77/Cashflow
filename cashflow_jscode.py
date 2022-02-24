@@ -44,10 +44,30 @@ js = JsCode("""function(e) {
       rowNode.setDataValue('f1Percent', f1Percent);
       rowNode.setDataValue('f2Amount', f2Amount);
       rowNode.setDataValue('f2Percent', f2Percent);
+    }
+
+    if (new_value === "Manual") {
+        var f1Amount = rowNode.data.f1Percent /100 * rowNode.data.EAC;
+        rowNode.setDataValue('f1Amount', f1Amount);
+    }
+
+    if (rowNode.data.forecastMethod === "Manual") {
+        var Month_0_$ = rowNode.data.Month_0_percent /100 * rowNode.data.EAC;
+        rowNode.setDataValue('Month_0_$', Month_0_$);
+    }
+
+
+    if (col_changed === "Month_0_%") {
+        var Month_0_$ = new_value /100 * rowNode.data.EAC;
+        rowNode.setDataValue('Month_0_$', Month_0_$);
 
     }
+
     };
     """)
+
+
+
   # js = JsCode("""function(e) {
   #   let api = e.api;
   #   let rowIndex = e.rowIndex;
