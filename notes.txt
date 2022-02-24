@@ -73,6 +73,35 @@ Answers:
     Maybe...
         Could update the grid using onCellValueChanged event??
 
+OK, getting somewhere now.
+  Plan:
+    For a new project (on the cost side at least)
+        1. Import the 'actual' data:
+            - Cost Item details (Group, Code, Description)
+            - Estimate at Completion
+            - Cost by Fiscal Period
+        2. User-defined details:
+            - project
+            - start date
+            - end date
+            - reporting date
+        3. Perform calculations in python to setup full dataframe
+            - default forecast method of 'Timeline' 
+        4. Initialize the grid using the dataframe from 3.
+        5. User-interaction with the grid stays in the 'front-end'
+            - onCellValueChanged event performs calculations as required
+        6. Update the database as required to store the modified dataframe.
+            - still need to figure out the details here!!??!!
+
+    When loading an existing project forecast
+        1. Retrieve the project data from the database.
+        2. Load it into the grid.
+        3. The grid managers the user interaction with grid - onCellValueChanged.
+        4. Update database as required.
+
+
+
+
 
 
 
