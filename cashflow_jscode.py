@@ -12,59 +12,111 @@ dropdown_jscode = JsCode("""
   };
   """)
 
+cellStyle_test = JsCode(""" function (params) {
+    if (params.data.forecastMethod === "Manual") {
+      return {'color':'white','backgroundColor':'grey'};
+    } else {
+      return {'color':'black','backgroundColor':'white'};
+      }
+}""")
+
 js = JsCode("""function(e) {
     let api = e.api;
     let rowIndex = e.rowIndex;
     let col_changed = e.column.colId;
     let new_value = e.newValue;
+    let old_value = e.oldValue;
     let rowNode = api.getRowNode(rowIndex);
-
+    console.log('onCellValueChanged fired!!!');
     console.log(rowIndex, rowNode);
-    console.log("new value:" , new_value);
+    console.log('api: ', api);
 
-    if (new_value === "Timeline") {
-      var f1Days = 31;
-      var f2Days = 28;
-      var numDays = rowNode.data.numDays;
-      var dollarsPerDay = rowNode.data.ETC / numDays;
-      if (numDays > f1Days) {
-          var f1Amount = f1Days * dollarsPerDay;
-          var f1Percent = f1Amount / rowNode.data.EAC * 100;
-          if ((numDays-f1Days) <= f2Days) {
-              var f2Amount = (numDays-f1Days) * dollarsPerDay;
-              var f2Percent = f2Amount / rowNode.data.EAC * 100;
-          }
-      } else {
-            var f1Amount = numDays * dollarsPerDay;
-            var f1Percent = f1Amount / rowNode.data.EAC * 100;
-            var f2Amount = 0;
-            var f2Percent = 0;
-      }
-      rowNode.setDataValue('f1Amount', f1Amount);
-      rowNode.setDataValue('f1Percent', f1Percent);
-      rowNode.setDataValue('f2Amount', f2Amount);
-      rowNode.setDataValue('f2Percent', f2Percent);
+    if (new_value === 'Manual' & col_changed === "forecastMethod") {
+/****      console.log('changing the days to null');   *****/
+/****      rowNode.setDataValue('showDays', '-');      *****/
+      rowNode.setDataValue('showDays', '-'); 
+      api.refreshCells({
+        force: true,
+        rowNodes: [rowNode],
+        });
     }
 
-    if (new_value === "Manual") {
-        var f1Amount = rowNode.data.f1Percent /100 * rowNode.data.EAC;
-        rowNode.setDataValue('f1Amount', f1Amount);
-    }
-
-    if (rowNode.data.forecastMethod === "Manual") {
-        var Month_0_$ = rowNode.data.Month_0_percent /100 * rowNode.data.EAC;
-        rowNode.setDataValue('Month_0_$', Month_0_$);
-    }
-
-
-    if (col_changed === "Month_0_%") {
-        var Month_0_$ = new_value /100 * rowNode.data.EAC;
-        rowNode.setDataValue('Month_0_$', Month_0_$);
-
+    if (new_value === 'Timeline' & col_changed === "forecastMethod") {
+/****      console.log('changing the days to null');                ****/
+      rowNode.setDataValue('showDays', rowNode.data.numDays);
+      api.refreshCells({
+        force: true,
+        rowNodes: [rowNode],
+        });
     }
 
     };
     """)
+
+
+# /***** 
+#     if (col_changed === "Month_0_percent" & rowNode.data.forecastMethod === "Manual") {
+#       console.log('recalculating monthly $$');
+#       console.log('new percentage is: ', new_value);
+#       var M0p = rowNode.data.Month_0_percent;
+#       var M1p = rowNode.data.Month_1_percent;
+#       var M2p = rowNode.data.Month_2_percent;
+#       var Month_0_$ = (new_value-rowNode.data.actual_percent) / 100 * rowNode.data.EAC;
+#       var Month_1_$ = (M1p - M0p) / 100 * rowNode.data.EAC;
+#       var Month_2_$ = (M2p - M1p) / 100 * rowNode.data.EAC;
+#       rowNode.setDataValue('Month_0_$', Month_0_$);
+#       rowNode.setDataValue('Month_1_$', Month_1_$);
+#       rowNode.setDataValue('Month_2_$', Month_2_$);
+#     }
+
+    
+#     if (new_value != old_value & rowNode.data.forecastMethod === "Manual") {
+#         var Month_0_$ = 777;
+#         var Month_1_$ = 333;
+#         console.log('column changed: ', col_changed);
+#         if (col_changed != 'Month_0_$') {
+#           console.log("changing value for", col_changed);
+#           rowNode.setDataValue('Month_0_$', Month_0_$);
+#           }
+#         console.log("again???...");
+#         if (col_changed != 'Month_1_$') {
+#           console.log("changing value for", col_changed);
+#           rowNode.setDataValue('Month_1_$', Month_1_$);
+#         }
+
+#     }
+# *****/
+
+#  var Month_0_$ = rowNode.data.Month_0_percent /100 * rowNode.data.EAC;
+#         rowNode.setDataValue('Month_0_$', Month_0_$);
+# if (new_value === "Timeline") {
+#       var f1Days = 31;
+#       var f2Days = 28;
+#       var numDays = rowNode.data.numDays;
+#       var dollarsPerDay = rowNode.data.ETC / numDays;
+#       if (numDays > f1Days) {
+#           var f1Amount = f1Days * dollarsPerDay;
+#           var f1Percent = f1Amount / rowNode.data.EAC * 100;
+#           if ((numDays-f1Days) <= f2Days) {
+#               var f2Amount = (numDays-f1Days) * dollarsPerDay;
+#               var f2Percent = f2Amount / rowNode.data.EAC * 100;
+#           }
+#       } else {
+#             var f1Amount = numDays * dollarsPerDay;
+#             var f1Percent = f1Amount / rowNode.data.EAC * 100;
+#             var f2Amount = 0;
+#             var f2Percent = 0;
+#       }
+#       rowNode.setDataValue('f1Amount', f1Amount);
+#       rowNode.setDataValue('f1Percent', f1Percent);
+#       rowNode.setDataValue('f2Amount', f2Amount);
+#       rowNode.setDataValue('f2Percent', f2Percent);
+#     }
+# if (col_changed === "Month_0_%") {
+#         var Month_0_$ = new_value /100 * rowNode.data.EAC;
+#         rowNode.setDataValue('Month_0_$', Month_0_$);
+
+#     }
 
 
 
@@ -92,6 +144,12 @@ js = JsCode("""function(e) {
   #       });
   #   };
   #   """)
+#   /**      api.flashCells({
+#         rowNodes: [rowNode],
+#         columns: ['Month_0_percent'],
+#         flashDelay: 350
+#         });
+# **/
 
 vg_ETC = JsCode("""
   function(params) {
@@ -121,8 +179,11 @@ vg_forecastPercent = JsCode(""" function(params) {
 
 
 
-
-
+percent_formatter = JsCode("""
+  function(params) {
+      return parseFloat(params.data.Month_0_percent).toFixed(1)+'%';
+  };
+  """)
 
 
 
