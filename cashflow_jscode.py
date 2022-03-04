@@ -12,9 +12,42 @@ dropdown_jscode = JsCode("""
   };
   """)
 
+editable = JsCode("""
+  function (params) {
+    if (params.data.forecastMethod === "Manual") {
+      return 'true';
+    }
+  };
+  """)
+
+
+cellEditorSelector = JsCode("""
+  function (params) {
+    if (params.data.forecastMethod === "Manual") {
+      return {
+        component: 'agRichSelectCellEditor',
+        params: {
+          values: [30, 40],
+        },
+      };
+    }
+    if (params.data.forecastMethod === "Timeline") {
+      return {
+        component: 'ttt',
+        params: {
+          values: [30, 40],
+        },
+      };
+    }
+  }
+  """)
+
+
+
 cellStyle_test = JsCode(""" function (params) {
     if (params.data.forecastMethod === "Manual") {
-      return {'color':'white','backgroundColor':'grey'};
+  /*    return {'color':'black','backgroundColor':'#ebebeb'};  */
+      return {'color':'black','backgroundColor':'rgba(235,235,235,1)'};
     } else {
       return {'color':'black','backgroundColor':'white'};
       }
@@ -30,28 +63,94 @@ js = JsCode("""function(e) {
     console.log('onCellValueChanged fired!!!');
     console.log(rowIndex, rowNode);
     console.log('api: ', api);
-
     if (new_value === 'Manual' & col_changed === "forecastMethod") {
-/****      console.log('changing the days to null');   *****/
-/****      rowNode.setDataValue('showDays', '-');      *****/
-      rowNode.setDataValue('showDays', '-'); 
       api.refreshCells({
         force: true,
         rowNodes: [rowNode],
         });
     }
-
     if (new_value === 'Timeline' & col_changed === "forecastMethod") {
-/****      console.log('changing the days to null');                ****/
-      rowNode.setDataValue('showDays', rowNode.data.numDays);
+      console.log('reset key for grid and reinitialize with data in dataframe');
+
+/***      api.redrawRows();  ***/
       api.refreshCells({
-        force: true,
-        rowNodes: [rowNode],
+        force: true,  
+        rowNodes: [rowNode], 
         });
     }
-
     };
     """)
+
+
+
+vg_ETC = JsCode("""
+  function(params) {
+    return parseFloat(params.data.EAC-params.data.ACTD).toLocaleString('en',{minimumFractionDigits: 2,  maximumFractionDigits: 2});
+  };
+  """)
+
+vg_forecastAmount = JsCode(""" function(params) {
+  let ETC = params.data.EAC - params.data.ACTD;
+  if (params.data.forecastMethod === 'Timeline') {
+      return ETC/3
+  } else {
+      return 0
+    }
+};""")
+
+vg_forecastPercent = JsCode(""" function(params) {
+  let ETC = params.data.EAC - params.data.ACTD;
+  let amountSoFar = ETC/3;
+  if (params.data.forecastMethod === 'Timeline') {
+      return amountSoFar/params.data.EAC
+  } else {
+      return 0
+    }
+};""")
+
+
+showDaysFormatter  = JsCode(""" function(params) {
+  if (params.data.forecastMethod === 'Timeline') {
+      return params.data.numDaysDuration
+  } else {
+      return '-'
+    }
+};""")
+
+
+percent_formatter = JsCode("""
+  function(params) {
+      return parseFloat(params.data.Month_0_percent).toFixed(1)+'%';
+  };
+  """)
+
+
+EAC_vf = JsCode("""
+  function(params) {
+    if (params.node.rowPinned === 'top') {
+        return parseFloat(params.data.EAC).toLocaleString('en',{minimumFractionDigits: 2,  maximumFractionDigits: 2})
+    } else {
+       return parseFloat(params.data.EAC).toLocaleString('en',{minimumFractionDigits: 2,  maximumFractionDigits: 2})
+    }
+  };
+  """)
+ACTD_vf = JsCode("""
+  function(params) {
+    if (params.node.rowPinned === 'top') {
+        return ""
+    } else {
+       return parseFloat(params.data.ACTD).toLocaleString('en',{minimumFractionDigits: 2,  maximumFractionDigits: 2})
+    }
+  };
+  """)
+
+
+
+
+
+
+
+
 
 
 # /***** 
@@ -150,59 +249,3 @@ js = JsCode("""function(e) {
 #         flashDelay: 350
 #         });
 # **/
-
-vg_ETC = JsCode("""
-  function(params) {
-    return parseFloat(params.data.EAC-params.data.ACTD).toLocaleString('en',{minimumFractionDigits: 2,  maximumFractionDigits: 2});
-  };
-  """)
-
-vg_forecastAmount = JsCode(""" function(params) {
-  let ETC = params.data.EAC - params.data.ACTD;
-  if (params.data.forecastMethod === 'Timeline') {
-      return ETC/3
-  } else {
-      return 0
-    }
-};""")
-
-vg_forecastPercent = JsCode(""" function(params) {
-  let ETC = params.data.EAC - params.data.ACTD;
-  let amountSoFar = ETC/3;
-  if (params.data.forecastMethod === 'Timeline') {
-      return amountSoFar/params.data.EAC
-  } else {
-      return 0
-    }
-};""")
-
-
-
-
-percent_formatter = JsCode("""
-  function(params) {
-      return parseFloat(params.data.Month_0_percent).toFixed(1)+'%';
-  };
-  """)
-
-
-
-
-EAC_vf = JsCode("""
-  function(params) {
-    if (params.node.rowPinned === 'top') {
-        return parseFloat(params.data.EAC).toLocaleString('en',{minimumFractionDigits: 2,  maximumFractionDigits: 2})
-    } else {
-       return parseFloat(params.data.EAC).toLocaleString('en',{minimumFractionDigits: 2,  maximumFractionDigits: 2})
-    }
-  };
-  """)
-ACTD_vf = JsCode("""
-  function(params) {
-    if (params.node.rowPinned === 'top') {
-        return ""
-    } else {
-       return parseFloat(params.data.ACTD).toLocaleString('en',{minimumFractionDigits: 2,  maximumFractionDigits: 2})
-    }
-  };
-  """)
