@@ -44,14 +44,17 @@ cellEditorSelector = JsCode("""
 
 
 
-cellStyle_test = JsCode(""" function (params) {
-    if (params.data.forecastMethod === "Manual") {
-  /*    return {'color':'black','backgroundColor':'#ebebeb'};  */
+cell_style = JsCode("""
+  function (params) {
+    if (params.value == "Manual") {
       return {'color':'black','backgroundColor':'rgba(235,235,235,1)'};
     } else {
       return {'color':'black','backgroundColor':'white'};
       }
-}""")
+};
+""")
+
+
 
 js = JsCode("""function(e) {
     let api = e.api;
@@ -110,19 +113,13 @@ vg_forecastPercent = JsCode(""" function(params) {
 
 
 showDaysFormatter  = JsCode(""" function(params) {
-  if (params.data.forecastMethod === 'Timeline') {
+  if (params.data.forecastMethod == 'Timeline') {
       return params.data.numDaysDuration
   } else {
       return '-'
     }
 };""")
 
-
-percent_formatter = JsCode("""
-  function(params) {
-      return parseFloat(params.data.Month_0_percent).toFixed(1)+'%';
-  };
-  """)
 
 
 EAC_vf = JsCode("""

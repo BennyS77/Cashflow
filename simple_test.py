@@ -5,7 +5,7 @@ import plotly.express as px
 import pandas as pd
 from datetime import datetime
 from dateutil.relativedelta import relativedelta
-from cashflow_jscode import js, cellEditorSelector, cellStyle_test,showDaysFormatter, editable
+from cashflow_jscode import js, cellEditorSelector, showDaysFormatter, editable, cell_style
 
 st.set_page_config(
      page_title="Premier Reports - Cashflow Report",
@@ -27,23 +27,18 @@ st.session_state.check = st.session_state.check + 1
 if 'grid_data' not in st.session_state:
   st.session_state.grid_data = pd.DataFrame.from_dict(
                                   {
+                                    "costGroup":[1,1,2],
                                     "costItem":['110','140','210'],
                                     "EAC":[1000.0,3000,2000.00],
                                     "ACTD":[600,800,200.0],
-                                    # "ETC":[0,0,0],
                                     "numDaysDuration":[20,45,65],
-                                    # "actual_$":[600,800,200.0],
-                                    # "percentPerDay":[0,0,0],
                                     "forecastMethod":['Timeline','Manual','Timeline'],
                                     "Month_0_availDaysInMonth":[25,25,25],
                                     "Month_0_accumPercent":[0,60,0],
-                                    # "Month_0_amount":[0,0,0],
                                     "Month_1_availDaysInMonth":[25,25,25],
                                     "Month_1_accumPercent":[0,80,0],
-                                    # "Month_1_amount":[0,0,0],
                                     "Month_2_availDaysInMonth":[25,25,25],
                                     "Month_2_accumPercent":[0,100,0],
-                                    # "Month_2_amount":[0,0,0],
                                   }
   )
 
@@ -74,13 +69,39 @@ st.session_state.grid_data = grid_data
 # st.write(st.session_state.changedValue)
 # st.write(grid_data)
 
+actualChildren=[{"headerName":"","field":"Tot","minWidth":80}]
+
+for i in range(0,st.session_state.actualMonths,1):
+    actualChildren.append(
+        {
+        "headerName" : 'Month'+str(i)+' - Claim '+str(i+1),
+        'columnGroupShow': 'open',
+         "children":[
+            {
+              # 'field': month+' - Claim '+str(i+1),
+              'headerName' : ' $',
+              'maxWidth':80,
+              'suppressMenu':True,
+              "valueFormatter": "parseFloat(value).toLocaleString('en',{minimumFractionDigits: 2,  maximumFractionDigits: 2})",
+              'cellStyle':{'backgroundColor':'lightgrey'}
+              },
+            {
+              # 'field': "Month_"+str(i)+"_amount",
+              'headerName' : ' %',
+              'maxWidth':60,
+              'suppressMenu':True,
+              "valueFormatter": "parseFloat(value*100).toLocaleString('en',{minimumFractionDigits: 2,  maximumFractionDigits: 2})",
+              'cellStyle':{'backgroundColor':'lightgrey'} }
+            ]},
+  )
+
 
 forecastChildren=[{"headerName":"","field":"for","minWidth":100}]
 
 for i in range(0,st.session_state.forecastMonths,1):
     month= 'Month: '+str(i+1)
-    forecast_dollars = 'F $'
-    forecast_percent = 'F %'
+    # formatterString='parseFloat(data.Month_'+str(i)+'_accumPercent).toLocaleString("en",{minimumFractionDigits: 2,  maximumFractionDigits: 2})'
+    # st.write(formatterString)
     forecastChildren.append(
         {"headerName" : month+' - Claim '+str(i+1),
         'columnGroupShow': 'open',
@@ -90,27 +111,40 @@ for i in range(0,st.session_state.forecastMonths,1):
               'maxWidth':80,
               'suppressMenu':True,
               "editable": editable,
-              "cellStyle": cellStyle_test,
-              "valueFormatter": "parseFloat(value).toFixed(1)+'%'"
+              "cellStyle": "--x_x--0_0-- function(params) { if (params.value == 'Timeline'){ return { 'color': 'white', 'backgroundColor': 'darkred' } } else { return { 'color': 'black', 'backgroundColor': 'white' } } }; --x_x--0_0--",
+              "valueFormatter": 'parseFloat(data.Month_'+str(i)+'_accumPercent).toFixed(1)+"%"'
               },
             { 'field': "Month_"+str(i)+"_amount",
               'headerName' : ' $',
               'maxWidth':100,
               'suppressMenu':True,
-              "valueFormatter": "parseFloat(value).toLocaleString('en',{minimumFractionDigits: 2,  maximumFractionDigits: 2})"
+              "valueFormatter": 'parseFloat(data.Month_'+str(i)+'_accumPercent).toLocaleString("en",{minimumFractionDigits: 2,  maximumFractionDigits: 2})'
               }
             ]},
   )
 
+row_class_rules = {
+    # "forecast-timeline": "data.forecastMethod == 'Timeline'",
+    "forecast-manual": "data.forecastMethod == 'Manual'",
+
+}
+
 gridOptions={
   "defaultColDef": {
-    "minWidth": 50,
-    "maxWidth": 120,
+    # "minWidth": 50,
+    # "maxWidth": 120,
     "filter": True,
     "resizable": True,
     "sortable": True
   },
   "columnDefs": [
+    { 
+      "headerName": "Cost Group",
+      "field": "costGroup",
+      # 'rowGroup':True,
+      "maxWidth": 95,
+      # "hide": True,
+    },
     { "headerName": "Cost Item",
       "field": "costItem",
       "maxWidth": 95,
@@ -142,15 +176,17 @@ gridOptions={
     },
     { "headerName": "Forecast Method",
       "field": "forecastMethod",
+      "maxWidth": 125,
+      'suppressMenu':True,
       "editable": True,
-      "cellStyle": cellStyle_test,
+      'cellStyle': "--x_x--0_0-- function(params) { if (params.value == 'Timeline'){ return { 'color': 'white', 'backgroundColor': 'darkred' } } else { return { 'color': 'black', 'backgroundColor': 'white' } } }; --x_x--0_0--",
+      # "cellStyle": cell_style,
       "cellEditor": 'agRichSelectCellEditor',
       "cellEditorParams": {'values': ['Timeline', 'Manual','S-curve'],},
     },
     { "headerName": "Days",
       "field": "numDaysDuration",
       "editable": True,
-      "maxWidth": 75,
       "hide":True,
       "type": [
         "numericColumn",
@@ -166,81 +202,55 @@ gridOptions={
         ],
       "valueFormatter":showDaysFormatter
     },
-    { "headerName": "Forecast",
-      "field": "Forecast",
-      "children":forecastChildren
+    { "headerName": "Actual",
+      "field": "Actual",
+      "children":actualChildren
     },
-    # { "headerName": "Mth_0_%",
-    #   "field": "Month_0_accumPercent",
-    #   "editable": editable,
-    #   "cellStyle": cellStyle_test,
-    #   "valueFormatter": "parseFloat(value).toFixed(1)+'%'"
-    # },
-    # { "headerName": "Mth_0_$",
-    #   "field": "Month_0_amount",
-    #   "type": [
-    #     "numericColumn",
-    #     "numberColumnFilter"
-    #     ],
-    #   "valueFormatter": "parseFloat(value).toLocaleString('en',{minimumFractionDigits: 2,  maximumFractionDigits: 2})"
-    # },
-    # { "headerName": "Mth_1_%",
-    #   "field": "Month_1_accumPercent",
-    #   "editable": editable,
-    #   "cellStyle": cellStyle_test,
-    #   "type": [
-    #     "numericColumn",
-    #     "numberColumnFilter"
-    #     ],
-    #   "valueFormatter": "parseFloat(value).toFixed(1)+'%'"
-    # },
-    # { "headerName": "Mth_1_$",
-    #   "field": "Month_1_amount",
-    #   "type": [
-    #     "numericColumn",
-    #     "numberColumnFilter"
-    #     ],
-    #   "valueFormatter": "parseFloat(value).toLocaleString('en',{minimumFractionDigits: 2,  maximumFractionDigits: 2})"
-    # },
-    # { "headerName": "Mth_2_%",
-    #   "field": "Month_2_accumPercent",
-    #   "editable": editable,
-    #   "cellStyle": cellStyle_test,
-    #   "type": [
-    #     "numericColumn",
-    #     "numberColumnFilter"
-    #     ],
-    #   "valueFormatter": "parseFloat(value).toFixed(1)+'%'"
-    # },
-    # { "headerName": "Mth_2_$",
-    #   "field": "Month_2_amount",
-    #   "type": [
-    #     "numericColumn",
-    #     "numberColumnFilter"
-    #     ],
-    #   "valueFormatter": "parseFloat(value).toLocaleString('en',{minimumFractionDigits: 2,  maximumFractionDigits: 2})"
-    # },
+    { "headerName": "Forecast",
+      # "field": "Forecast",
+      "openByDefault":True,
+      "children":forecastChildren,
+      "maxWidth": 175,
+    },
+    
   ],
   "debug":True,
+  "rowClassRules":row_class_rules,
   "onCellValueChanged": js,
+  'groupDefaultExpanded':True,
+  'animateRows':True,
   # "columnHoverHighlight":True,
   # "onCellEditingStarted": 'console.log("cell editing started")',
   # "onCellEditingStopped": 'console.log("cell editing stopped")',
   # "enableCellChangeFlash": True
 }
 
+col1, col2, col3, col4 = st.columns([4,1,1,1])
+with col1:
+  st.markdown('## Cashflow Forecast')
+with col2:
+  st.markdown('#### Revenue')
+with col3:
+  st.markdown('#### Cost')
+with col4:
+  st.markdown('#### Summary')
 
-st.markdown('### Cashflow Forecast')
 
 use_key = st.sidebar.checkbox("use key",value=True)
 st.sidebar.write(use_key)
 reloadData = st.sidebar.checkbox("reload data",value=True)
 st.sidebar.write(reloadData)
 
+st.markdown('-----')
 
-if use_key == True:
-  grid_response = AgGrid(
+custom_css= {
+  # ".forecast-timeline": {"color": "green !important"},
+  ".forecast-manual": {"color": "red !important"},
+}
+
+grid_response = AgGrid(
       dataframe = grid_data,
+      custom_css = custom_css,
       gridOptions = gridOptions, 
       height = 300,
       enable_enterprise_modules=True,
@@ -252,21 +262,9 @@ if use_key == True:
       update_mode='MODEL_CHANGED',
       allow_unsafe_jscode=True #Set it to True to allow jsfunction to be injected
       )
-elif use_key == False:
-  grid_response = AgGrid(
-      dataframe = grid_data,
-      gridOptions = gridOptions, 
-      height = 300,
-      enable_enterprise_modules=True,
-      fit_columns_on_grid_load=False,
-      # key = 'myKey',   #- set a key to stop the grid reinitialising when the dataframe changes
-      reload_data=reloadData,   # data will only refresh when reload_data = True
-      # update_mode=GridUpdateMode.SELECTION_CHANGED,
-      allow_unsafe_jscode=True #Set it to True to allow jsfunction to be injected
-      )
 
 
-
+st.write(gridOptions)
 # st.write(grid_response['data'])
 
 diff = grid_response['data'].compare(grid_data)

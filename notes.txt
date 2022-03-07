@@ -107,6 +107,9 @@ OK, getting somewhere now.
 
 General notes:
 
+Using a key with reload_data=false   -->  smooth refreshes!! Might be what we are looking for!!
+
+
 Key and data_reload
 
 According to Pablo:
@@ -148,3 +151,9 @@ User-changeable values that will need to be updated and loaded back into the gri
     - start date / end date
     - forecast monthly percentages
 
+
+error codes:
+"AG Grid: cannot get grid to draw rows when it is in the middle of drawing rows.
+Your code probably called a grid API method while the grid was in the render stage.
+To overcome this, put the API call into a timeout, e.g. instead of api.refreshView(), call setTimeout(function() { api.refreshView(); }, 0).
+To see what part of your code that caused the refresh check this stacktrace."
