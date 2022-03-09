@@ -46,7 +46,7 @@ cellEditorSelector = JsCode("""
 
 cell_style = JsCode("""
   function (params) {
-    if (params.value == "Manual") {
+    if (params.data.forecastMethod == "Manual") {
       return {'color':'black','backgroundColor':'rgba(235,235,235,1)'};
     } else {
       return {'color':'black','backgroundColor':'white'};
@@ -75,14 +75,13 @@ js = JsCode("""function(e) {
     if (new_value === 'Timeline' & col_changed === "forecastMethod") {
       console.log('reset key for grid and reinitialize with data in dataframe');
 
-/***      api.redrawRows();  ***/
       api.refreshCells({
         force: true,  
         rowNodes: [rowNode], 
         });
-    }
+      }
     };
-    """)
+""")
 
 
 

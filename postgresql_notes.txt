@@ -1,0 +1,13 @@
+Google Cloud
+
+Cloud SQL - PostgreSQL
+
+    - connect using Cloud SQL Auth proxy
+    - for development purposes, not production
+
+To start the Cloud SQL Auth proxy:  (current it's within the Django_old directory)
+    ./cloud_sql_proxy -instances=aged-receivables-111:australia-southeast1:my-pgresqp=tcp:5432
+
+To connect to 'test_database' using psql
+    psql "host=127.0.0.1 port=5432 sslmode=disable dbname=test_database user=postgres"
+np22
