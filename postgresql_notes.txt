@@ -8,6 +8,39 @@ Cloud SQL - PostgreSQL
 To start the Cloud SQL Auth proxy:  (current it's within the Django_old directory)
     ./cloud_sql_proxy -instances=aged-receivables-111:australia-southeast1:my-pgresqp=tcp:5432
 
-To connect to 'test_database' using psql
+To connect to 'test_database' using psql (ie from the command line)
     psql "host=127.0.0.1 port=5432 sslmode=disable dbname=test_database user=postgres"
-np22
+(np22)
+
+
+A database would typically contain multiple tables that are 'related' to each other.
+The schema of the database would define how they are related.
+
+The general idea:
+    When a user logs in, if its a new project, setup initial data with Odata, etc, then
+    save table data to database. Will work directly with this data from hereon (aggrid etc)
+    If project already exists, retrieve table data from database (for aggrid etc)
+
+
+Data that is to persist between sessions and between user-envoked updates.
+    - Cost Group
+    - Cost Item
+    - EAC
+    - ACTD
+    - startDate
+    - endDate
+    - forecastMethod
+    - 'actuals'
+    - monthly percentages for 'Manual' forecast methods.
+
+
+
+Initially: just set up a single table. eg Cost data.
+
+SQLAlchemy
+
+Database Metadata
+    - Metadata object  - a dictionary of Table objects   
+    - Table objects    
+    - Columns
+

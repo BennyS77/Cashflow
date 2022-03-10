@@ -47,13 +47,22 @@ cellEditorSelector = JsCode("""
 cell_style = JsCode("""
   function (params) {
     if (params.data.forecastMethod == "Manual") {
-      return {'color':'black','backgroundColor':'rgba(235,235,235,1)'};
+      return {'color':'black','backgroundColor':'rgba(250,250,250,1)'};
     } else {
       return {'color':'black','backgroundColor':'white'};
       }
 };
 """)
 
+cell_style2 = JsCode("""
+  function (params) {
+    if (params.data.forecastMethod == "Timeline") {
+      return {'color':'black','backgroundColor':'rgba(250,250,250,1)'};
+    } else {
+      return {'color':'black','backgroundColor':'white'};
+      }
+};
+""")
 
 
 js = JsCode("""function(e) {

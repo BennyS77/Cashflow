@@ -9,6 +9,10 @@ engine = create_engine("postgresql+psycopg2://postgres:np22@127.0.0.1:5432/test_
 data_list = [{"x": 1, "y": 1}, {"x": 2, "y": 4}]
 
 
+# with engine.connect() as conn:
+#     conn.execute(text("DROP TABLE some_table"))
+#     conn.commit()
+
 
 with engine.connect() as conn:
     conn.execute(text("CREATE TABLE some_table (x int, y int)"))
