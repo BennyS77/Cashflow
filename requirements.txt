@@ -1,0 +1,6 @@
+streamlit
+streamlit-multipage
+streamlit-aggrid
+sqlalchemy
+plotly
+joblib
