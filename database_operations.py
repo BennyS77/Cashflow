@@ -1,19 +1,34 @@
 import streamlit as st
-from datetime import datetime
-from sqlalchemy import create_engine, text, delete
+# from datetime import datetime
+# from sqlalchemy import create_engine, text, delete
 from sqlalchemy.types import Integer, Text, String, DateTime, Float
 import pandas as pd
-from dateutil.relativedelta import relativedelta
-from cost_data import getCostSummaryData, getEACdata, processData, calculations
-from myConfig import pageConfig
-from st_aggrid import AgGrid, JsCode
-from myConfig import pageConfig, report_details
-import numpy as np
+# from dateutil.relativedelta import relativedelta
+# from cost_data import getCostSummaryData, getEACdata, processData
+# from myConfig import pageConfig
+# from st_aggrid import AgGrid, JsCode
+# import numpy as np
+
+def writeDetailsToDatabase(detailsData, table_name):
+    """ write the Details information to the database """
+    dtype_dict = {
+            "job_start_date":DateTime,
+            "forecast_end_date":DateTime,
+            "reporting_month":DateTime,
+    }
+    detailsData.to_sql(
+        table_name,
+        st.session_state.engine,
+        if_exists='replace',
+        index=False,
+        dtype=dtype_dict
+    )
+    # st.write(f'Successfully wrote to database: {table_name}')
+    return 
 
 
 
-
-def writeToDatabase(baseCostData, table_name):
+def writeCostDataToDatabase(baseCostData, table_name):
     # st.write(f"Write to database: {table_name}")
     dtype_dict={}
     for item in baseCostData.columns:
@@ -36,9 +51,23 @@ def writeToDatabase(baseCostData, table_name):
     # st.write(f'Successfully wrote to database: {table_name}')
     return 
 
+def readDetailsFromDatabase(table_name):
+    ### .... Read table_name from the database .... ###
+    my_query = 'SELECT * FROM '+ table_name
+    data = pd.read_sql(
+        my_query,
+        st.session_state.engine,
+        parse_dates=[
+            'job_start_date',
+            'forecast_end_date',
+            'reporting_month'
+        ]
+    )
+    # st.sidebar.write(f'Successfully read from database: {table_name}')
+    return data 
 
 def readDatabase(table_name):
-    # st.write(f"Reading table: {table_name}")
+    ### .... Read table_name from the database .... ###
     my_query = 'SELECT * FROM '+ table_name
     data = pd.read_sql(
         my_query,
@@ -48,7 +77,7 @@ def readDatabase(table_name):
             'endDate'
         ]
     )
-    # st.write(f'Successfully read from database: {table_name}')
+    # st.sidebar.write(f'Successfully read from database: {table_name}')
     return data 
 
 

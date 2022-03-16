@@ -6,6 +6,21 @@ import pandas as pd
 import requests
 import numpy as np
 
+
+@st.experimental_memo()
+def getCompanyJobOptions():
+        import requests
+        dataset = 'JobContactsViews'
+        URL = 'https://reporting.jonas-premier.com/OData/ODataService.svc/'+dataset+'/?$format=json'
+        username='317016\BenStewart' #'321076\ReportsAPI'
+        password='gXAd5P6EYS5EMAdk'  #'ZdP9jZ5asd8BeSP5'
+        response = requests.get(URL, auth = (username,password))
+        dict_1=response.json() 
+        list_1 = dict_1['value']
+        df_1 = pd.DataFrame(list_1)
+        return df_1
+
+
 @st.experimental_memo()
 def getCostSummaryData():
         dataset = 'JobCostSummaryByFiscalPeriods' #'ARPostedInvoices'  #
@@ -29,24 +44,25 @@ def getEACdata():
     return eacData
 
 
-def processData(r1):
+def processData(company_code, job_number, reporting_date, end_date):
     allActualCostData = getCostSummaryData()
     eacData = getEACdata()
-    companyActualCostData = allActualCostData[allActualCostData['Company_Code']==r1.company_code]
-    jobActualCostData = companyActualCostData[companyActualCostData['Job_Number']==r1.job_number]
+    companyActualCostData = allActualCostData[allActualCostData['Company_Code']==company_code]
+    jobActualCostData = companyActualCostData[companyActualCostData['Job_Number']==job_number]
     costData = jobActualCostData[['Cost_Item','Actual_Dollars','Fiscal_Period']]
     costData['Fiscal_Period'] = pd.to_datetime(costData['Fiscal_Period'], format='%Y-%m')
     costData['Actual_Dollars']=costData['Actual_Dollars'].astype(float)
     costData['Calendar_Period'] = costData['Fiscal_Period'].apply(lambda x: x - relativedelta(months=6)+relativedelta(days=15))
     costData.drop(['Fiscal_Period'], axis=1, inplace=True)
     firstMonth = costData['Calendar_Period'].min()
-    st.session_state.report_details.start_date = firstMonth
-    lastMonth = costData['Calendar_Period'].max()
+    # st.session_state.report_details.start_date = firstMonth
+    # lastMonth = costData['Calendar_Period'].max()
+    lastMonth = reporting_date
     d_end=[0]*len(pd.period_range(firstMonth, lastMonth, freq='M'))
     for i in range(len(pd.period_range(firstMonth, lastMonth, freq='M'))):
             d_start=pd.Period(firstMonth,freq='M').start_time.date() + relativedelta(months=i)
             d_end[i]=pd.Period(firstMonth,freq='M').end_time.date() + relativedelta(months=i)
-            costData[d_end[i].strftime('%b %y')+' A$'] = costData.apply(lambda x: x.Actual_Dollars if x.Calendar_Period>=d_start and x.Calendar_Period<=d_end[i] else 0, axis=1)
+            costData[d_end[i].strftime('%b %y')] = costData.apply(lambda x: x.Actual_Dollars if x.Calendar_Period>=d_start and x.Calendar_Period<=d_end[i] else 0, axis=1)
     costData.drop(['Actual_Dollars','Calendar_Period'], axis=1, inplace=True)
     costData=costData.groupby(['Cost_Item']).apply(lambda x: x.sum())
     costData.drop(['Cost_Item'], axis=1, inplace=True)
@@ -57,13 +73,12 @@ def processData(r1):
     costData.fillna({'Description':'unknown','EAC':0,'costGroup':'1'}, inplace=True)
     for i in range(len(pd.period_range(firstMonth, lastMonth, freq='M'))):
         ### change this to cumulative percentage??
-        costData[d_end[i].strftime('%b %y')+' A%']=costData.apply(lambda x: x[d_end[i].strftime('%b %y')+' A$']/x.EAC if x.EAC>0 else 0, axis=1)
-    costData['startDate']=pd.Period(r1.reporting_date,freq='M').start_time.date() + relativedelta(months=1)
-    # costData['endDate']= r1.end_date
-    costData['endDate']= r1.end_date.date()  ## convert it to datetime
+        costData[d_end[i].strftime('%b %y')+' A%']=costData.apply(lambda x: x[d_end[i].strftime('%b %y')]/x.EAC if x.EAC>0 else 0, axis=1)
+    costData['startDate']=pd.Period(reporting_date,freq='M').start_time.date() + relativedelta(months=1)
+    costData['endDate']= end_date.date()  ## convert it to datetime
     costData['forecastmethod']='Timeline'
     
-    return costData
+    return costData, firstMonth
 
 
 def myFunc(x):
@@ -75,18 +90,18 @@ def myFunc(x):
     return workDaysInMonth
 
 
-def calculations(grid_data, r1):
+def forecastCalcs(grid_data, r1):
     grid_data['ETC'] = grid_data['EAC'] - grid_data['ACTD']
-    grid_data['startDate'] = grid_data.apply(lambda x: x.startDate.date(), axis=1)
-    grid_data['endDate'] = grid_data.apply(lambda x: x.endDate.date(), axis=1)
+    # grid_data['startDate'] = grid_data.apply(lambda x: x.startDate.date(), axis=1)
+    # grid_data['endDate'] = grid_data.apply(lambda x: x.endDate.date(), axis=1)
     # st.write(type(grid_data['startDate'].iloc[0]))
     # st.write(type(grid_data['endDate'].iloc[0]))
     grid_data['numDaysDuration'] = grid_data.apply(lambda x: np.busday_count(x.startDate, x.endDate, weekmask=[1,1,1,1,1,0,0]), axis = 1)
     grid_data['accumPercent'] = grid_data.apply(lambda x: x['ACTD']/x['EAC']*100 if x['EAC']>0 else 0, axis=1)
     grid_data['percentPerDay'] = grid_data.apply(lambda x: x['ETC']/x['EAC']*100/ x['numDaysDuration'] if x['EAC']>0 else 0, axis=1)
     grid_data['daysLeft'] = grid_data['numDaysDuration']
-    for i in range(1, r1.forecast_months()+1, 1):
-        thisMonth = pd.Period(r1.reporting_date,freq='M').start_time.date() + relativedelta(months=i)
+    for i in range(1, relativedelta(r1.forecast_end_date[0], r1.reporting_month[0]).months+1, 1):
+        thisMonth = pd.Period(r1.reporting_month[0],freq='M').start_time.date() + relativedelta(months=i)
         grid_data['workDaysInMonth']=grid_data.apply(myFunc, axis=1)
         grid_data['accumPercent'] = grid_data['accumPercent'] + grid_data['workDaysInMonth']*grid_data['percentPerDay']
         grid_data[thisMonth.strftime('%b %y')+' F%'] = grid_data['accumPercent']
