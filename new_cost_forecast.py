@@ -3,7 +3,7 @@ from datetime import datetime
 from dateutil.relativedelta import relativedelta
 from st_aggrid import AgGrid, JsCode
 from myConfig import pageConfig, setSessionData
-from cost_data import getCostSummaryData, getEACdata, processData, forecastCalcs,getCompanyJobOptions
+from cost_data import getJobCostPerFiscalPeriod, getEACdata, processData, forecastCalcs,getCompanyJobOptions
 from database_operations import readDetailsFromDatabase, writeCostDataToDatabase, writeDetailsToDatabase
 from aggrid_functions import configActualChildren, configForecastChildren, configureGridOptions
 import numpy as np
@@ -17,17 +17,16 @@ def userLogIn():
     return
 
 def getCompaniesAndJobs():
-    """ Get a list of companies associated with the credentials"""
+    """ Get a list of companies and jobs associated with the credentials"""
     allJobsData = getCompanyJobOptions()
     jobsData = allJobsData.drop_duplicates(subset=['Company_Code','Job_Number'])
     return jobsData[['Company_Code','Job_Number']]
 
 
 jobsData = getCompaniesAndJobs()
-st.session_state.count = st.session_state.count + 1
-# st.write(st.session_state.count)
-### Return: a list of companies User selects one.
-# company_list = [""]
+
+
+###...  Return a list of companies User selects one ...###
 company_list = np.unique(np.array(jobsData.Company_Code)).tolist()
 company_list.append("")
 company_code = st.sidebar.selectbox("Company:", company_list, index = len(company_list)-1)
@@ -39,15 +38,22 @@ if company_code:
     # st.session_state.job_number = st.sidebar.selectbox("Job:", job_list, index = len(job_list)-1 )
     st.session_state.job_number = st.sidebar.selectbox("Job:",['PD140479'])
 
+refresh_data=True
 
 if st.session_state.job_number != "":
-    report_table_name = ('reportdetails_'+company_code+st.session_state.job_number).lower()
-    cost_table_name = ('costdata_'+company_code+st.session_state.job_number).lower()
+    # costPerPeriod_table = ('costPerPeriod_'+company_code+st.session_state.job_number).lower()
+    # EAC_table = ('EAC_'+company_code+st.session_state.job_number).lower()
+    costForecast_table = ('costForecast_'+company_code+st.session_state.job_number).lower()
+
+    if refresh_data==True:
+        jobCostPerFiscalPeriod = getJobCostPerFiscalPeriod()
+        eacData = getEACdata()
+        itemCostPerPeriod = processData(company_code, st.session_state.job_number, )
 
     ### Search database to see if 'Details' exist for that combo
     try:
         report_details = readDetailsFromDatabase(report_table_name)
-        st.write(type(report_details.reporting_month[0]))
+        # st.write(type(report_details.reporting_month[0]))
         # baseCostData = readDatabase(cost_table_name)
         baseCostData, job_start_date = processData(company_code,st.session_state.job_number,report_details.reporting_month[0],report_details.forecast_end_date[0])
         ## If NO --> report hasnt been generated previously so import data

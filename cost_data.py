@@ -8,45 +8,66 @@ import numpy as np
 
 
 @st.experimental_memo()
-def getCompanyJobOptions():
-        import requests
-        dataset = 'JobContactsViews'
-        URL = 'https://reporting.jonas-premier.com/OData/ODataService.svc/'+dataset+'/?$format=json'
-        username='317016\BenStewart' #'321076\ReportsAPI'
-        password='gXAd5P6EYS5EMAdk'  #'ZdP9jZ5asd8BeSP5'
-        response = requests.get(URL, auth = (username,password))
-        dict_1=response.json() 
-        list_1 = dict_1['value']
-        df_1 = pd.DataFrame(list_1)
-        return df_1
+def getCompanyAndJobList(creds):
+    import requests
+    dataset = 'JobContactsViews'
+    URL = 'https://reporting.jonas-premier.com/OData/ODataService.svc/'+dataset+'/?$format=json'
+    username=creds['username']
+    password=creds['password']
+    response = requests.get(URL, auth = (username,password))
+    dict_1=response.json() 
+    list_1 = dict_1['value']
+    df_1 = pd.DataFrame(list_1)
+    df_1 = df_1[['Company_Code','Job_Number']]
+    company_list = df_1['Company_Code'].drop_duplicates().tolist()
+    company_list.append("")
+    return company_list, df_1
+
+def getJobList(company, companies_and_jobs):
+    job_list = companies_and_jobs['Job_Number'].where(companies_and_jobs['Company_Code']==company).tolist()
+    job_list.append("")
+    return job_list
 
 
 @st.experimental_memo()
-def getCostSummaryData():
-        dataset = 'JobCostSummaryByFiscalPeriods' #'ARPostedInvoices'  #
-        URL = 'https://reporting.jonas-premier.com/OData/ODataService.svc/'+dataset+'/?$format=json'
-        # URL = 'https://reporting.jonas-premier.com/OData/ODataService.svc/?$format=json'
-        username='317016\BenStewart' #'321076\ReportsAPI'
-        password='gXAd5P6EYS5EMAdk'  #'ZdP9jZ5asd8BeSP5'
-        response = requests.get(URL, auth = (username,password))
-        # st.write(response.status_code)
-        dict_1 = response.json()  ## create a dictionary 2 keys - 'odata.metadata' and 'value'.  Value is a list of dictionaries
-        list_1 = dict_1['value']
-        df_1 = pd.DataFrame(list_1)
-        return df_1
+def getJobCostByFiscalPeriod(creds):
+    dataset = 'JobCostSummaryByFiscalPeriods' 
+    URL = 'https://reporting.jonas-premier.com/OData/ODataService.svc/'+dataset+'/?$format=json'
+    # URL = 'https://reporting.jonas-premier.com/OData/ODataService.svc/?$format=json'
+    username=creds['username']
+    password=creds['password']
+    response = requests.get(URL, auth = (username,password))
+    # st.write(response.status_code)
+    dict_1 = response.json()  ## create a dictionary 2 keys - 'odata.metadata' and 'value'.  Value is a list of dictionaries
+    list_1 = dict_1['value']
+    df_1 = pd.DataFrame(list_1)
+    return df_1[['Fiscal_Period','Job_Number','Cost_Item','Actual_Dollars','Company_Code']]
 
 
 def getEACdata():
     eacData= pd.read_csv('CostAtCompletion.csv')
     eacData=eacData[['Cost Item','Desc','Estimate At Completion']]
-    eacData['costGroup']='1'
-    eacData = eacData.rename(columns={'Cost Item':'costitem','Desc':'Description','Estimate At Completion':'EAC'})
+    eacData['costgroup']='1'
+    eacData = eacData.rename(columns={'Cost Item':'costitem','Desc':'description','Estimate At Completion':'eac'})
     return eacData
 
 
+def createForecastDetails(costitems):
+    df = pd.DataFrame(costitems)
+    df['reporting_month']=pd.Period(datetime.today(),freq='M').end_time.date() + relativedelta(months=-1)
+    df['forecast_end_date']=(datetime.today() + relativedelta(months=6)).date()
+    df['item_start_date']=df['reporting_month'].apply(lambda x: pd.Period(x,freq='M').start_time.date() + relativedelta(months=1))
+    df['item_end_date']=df['forecast_end_date']
+    df['forecast_method']="Timeline"
+    for i in range(1, len(pd.period_range(df['reporting_month'].iloc[0], df['forecast_end_date'].iloc[0], freq='M')),1):
+        month=pd.Period(df['reporting_month'].iloc[0],freq='M').start_time.date() + relativedelta(months=i)
+        df[month.strftime('%b %y')]=0
+    return df
+
+
 def processData(company_code, job_number, reporting_date, end_date):
-    allActualCostData = getCostSummaryData()
-    eacData = getEACdata()
+    # allActualCostData = getCostSummaryData()
+    # eacData = getEACdata()
     companyActualCostData = allActualCostData[allActualCostData['Company_Code']==company_code]
     jobActualCostData = companyActualCostData[companyActualCostData['Job_Number']==job_number]
     costData = jobActualCostData[['Cost_Item','Actual_Dollars','Fiscal_Period']]
@@ -66,6 +87,14 @@ def processData(company_code, job_number, reporting_date, end_date):
     costData.drop(['Actual_Dollars','Calendar_Period'], axis=1, inplace=True)
     costData=costData.groupby(['Cost_Item']).apply(lambda x: x.sum())
     costData.drop(['Cost_Item'], axis=1, inplace=True)
+    st.write("CostData:")
+    st.write(costData)
+    col_list = costData.columns.values.tolist() 
+    for i in range(len(col_list)):
+        col_list[i]=datetime.strptime(col_list[i], "%b %y")
+    st.write(col_list)
+    st.write(min(col_list))
+    st.write(type(col_list[0]))
     costData['ACTD'] = costData.sum(axis=1)
     costData.reset_index(inplace=True)
     costData = costData.rename(columns = {'Cost_Item':'costitem'})
@@ -100,7 +129,7 @@ def forecastCalcs(grid_data, r1):
     grid_data['accumPercent'] = grid_data.apply(lambda x: x['ACTD']/x['EAC']*100 if x['EAC']>0 else 0, axis=1)
     grid_data['percentPerDay'] = grid_data.apply(lambda x: x['ETC']/x['EAC']*100/ x['numDaysDuration'] if x['EAC']>0 else 0, axis=1)
     grid_data['daysLeft'] = grid_data['numDaysDuration']
-    for i in range(1, relativedelta(r1.forecast_end_date[0], r1.reporting_month[0]).months+1, 1):
+    for i in range(1, (relativedelta(r1.forecast_end_date[0], r1.reporting_month[0]).months)+3, 1):
         thisMonth = pd.Period(r1.reporting_month[0],freq='M').start_time.date() + relativedelta(months=i)
         grid_data['workDaysInMonth']=grid_data.apply(myFunc, axis=1)
         grid_data['accumPercent'] = grid_data['accumPercent'] + grid_data['workDaysInMonth']*grid_data['percentPerDay']

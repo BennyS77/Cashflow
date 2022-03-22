@@ -9,6 +9,21 @@ import pandas as pd
 # from st_aggrid import AgGrid, JsCode
 # import numpy as np
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 def writeDetailsToDatabase(detailsData, table_name):
     """ write the Details information to the database """
     dtype_dict = {
