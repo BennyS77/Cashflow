@@ -52,10 +52,12 @@ def getEACdata():
     return eacData
 
 
-def createForecastDetails(costitems):
+def createForecastDetails(costitems, reporting_month, forecast_end_date):
     df = pd.DataFrame(costitems)
-    df['reporting_month']=pd.Period(datetime.today(),freq='M').end_time.date() + relativedelta(months=-1)
-    df['forecast_end_date']=(datetime.today() + relativedelta(months=6)).date()
+    # reporting_month = pd.Period(datetime.today(),freq='M').end_time.date() + relativedelta(months=-1)
+    df['reporting_month']=reporting_month.date()
+    # forecast_end_date = (datetime.today() + relativedelta(months=6)).date()
+    df['forecast_end_date']=forecast_end_date
     df['item_start_date']=df['reporting_month'].apply(lambda x: pd.Period(x,freq='M').start_time.date() + relativedelta(months=1))
     df['item_end_date']=df['forecast_end_date']
     df['forecast_method']="Timeline"
@@ -65,17 +67,23 @@ def createForecastDetails(costitems):
     return df
 
 
+def filterFormatData(company, job, cost_data):
+    cost_data = cost_data[cost_data['Company_Code']==company]
+    cost_data = cost_data[cost_data['Job_Number']==job]
+    cost_data = cost_data[['Cost_Item','Actual_Dollars','Fiscal_Period']]
+    cost_data['Fiscal_Period'] = pd.to_datetime(cost_data['Fiscal_Period'], format='%Y-%m')
+    cost_data['Actual_Dollars']=cost_data['Actual_Dollars'].astype(float)
+    cost_data['Calendar_Period'] = cost_data['Fiscal_Period'].apply(lambda x: x - relativedelta(months=6)+relativedelta(days=15))
+    cost_data.drop(['Fiscal_Period'], axis=1, inplace=True)
+    first_month = cost_data['Calendar_Period'].min()
+    date_range = pd.date_range(start=first_month, end=datetime.today(), freq='M').tolist()
+
+    return cost_data, date_range
+
+
+
 def processData(company_code, job_number, reporting_date, end_date):
-    # allActualCostData = getCostSummaryData()
-    # eacData = getEACdata()
-    companyActualCostData = allActualCostData[allActualCostData['Company_Code']==company_code]
-    jobActualCostData = companyActualCostData[companyActualCostData['Job_Number']==job_number]
-    costData = jobActualCostData[['Cost_Item','Actual_Dollars','Fiscal_Period']]
-    costData['Fiscal_Period'] = pd.to_datetime(costData['Fiscal_Period'], format='%Y-%m')
-    costData['Actual_Dollars']=costData['Actual_Dollars'].astype(float)
-    costData['Calendar_Period'] = costData['Fiscal_Period'].apply(lambda x: x - relativedelta(months=6)+relativedelta(days=15))
-    costData.drop(['Fiscal_Period'], axis=1, inplace=True)
-    firstMonth = costData['Calendar_Period'].min()
+    
     # st.session_state.report_details.start_date = firstMonth
     # lastMonth = costData['Calendar_Period'].max()
     lastMonth = reporting_date
