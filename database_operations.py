@@ -12,25 +12,19 @@ import pandas as pd
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
 def writeDetailsToDatabase(detailsData, table_name):
-    """ write the Details information to the database """
-    dtype_dict = {
-            "job_start_date":DateTime,
-            "forecast_end_date":DateTime,
+    """ write the Forecast Details information to the database """
+    dtype_dict={}
+    for item in detailsData.columns:
+        dtype_dict.update({item:Float})
+    dtype_dict.update({
+            "costitem":String(30),
             "reporting_month":DateTime,
-    }
+            "forecast_end_date":DateTime,
+            "item_start_date":DateTime,
+            "item_end_date":DateTime,
+            "forecast_method":String(20),
+    })
     detailsData.to_sql(
         table_name,
         st.session_state.engine,
@@ -38,8 +32,30 @@ def writeDetailsToDatabase(detailsData, table_name):
         index=False,
         dtype=dtype_dict
     )
-    # st.write(f'Successfully wrote to database: {table_name}')
+    st.write(f'Successfully wrote to database: {table_name}')
     return 
+
+
+def readDetailsFromDatabase(table_name):
+    ### .... Read table_name from the database .... ###
+    my_query = 'SELECT * FROM '+ table_name
+    data = pd.read_sql(
+        my_query,
+        st.session_state.engine,
+        parse_dates=[
+            "reporting_month",
+            "forecast_end_date",
+            "item_start_date",
+            "item_end_date",
+        ]
+    )
+    # st.sidebar.write(f'Successfully read from database: {table_name}')
+    return data 
+
+
+
+
+
 
 
 
@@ -66,20 +82,7 @@ def writeCostDataToDatabase(baseCostData, table_name):
     # st.write(f'Successfully wrote to database: {table_name}')
     return 
 
-def readDetailsFromDatabase(table_name):
-    ### .... Read table_name from the database .... ###
-    my_query = 'SELECT * FROM '+ table_name
-    data = pd.read_sql(
-        my_query,
-        st.session_state.engine,
-        parse_dates=[
-            'job_start_date',
-            'forecast_end_date',
-            'reporting_month'
-        ]
-    )
-    # st.sidebar.write(f'Successfully read from database: {table_name}')
-    return data 
+
 
 def readDatabase(table_name):
     ### .... Read table_name from the database .... ###
