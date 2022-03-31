@@ -18,7 +18,7 @@ def writeDetailsToDatabase(detailsData, table_name):
     for item in detailsData.columns:
         dtype_dict.update({item:Float})
     dtype_dict.update({
-            "costitem":String(30),
+            "cost_item":String(30),
             "reporting_month":DateTime,
             "forecast_end_date":DateTime,
             "item_start_date":DateTime,

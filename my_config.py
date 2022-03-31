@@ -4,23 +4,42 @@ from sqlalchemy import create_engine
 import streamlit as st
 
 def pageConfig():
-  st.set_page_config(
+    st.set_page_config(
       page_title="Premier Reports - Cost Forecast",
       page_icon="bar-chart",
       layout="wide",
       initial_sidebar_state="expanded"  #expanded" #"collapsed" #auto
-  )
+    )
+    st.markdown("## Cost Forecast")
 
 def setSessionData():
     if 'submitted' not in st.session_state:
         st.session_state.submitted = False
-    # if 'isCompanySelected' not in st.session_state:
-    #     st.session_state.isCompanySelected = False
-    # if 'job_number' not in st.session_state:
-    #     st.session_state.job_number = ""
+    if 'reportingmonth' not in st.session_state:
+        st.session_state.reportingmonth = ""
+    if 'forecast_end_date' not in st.session_state:
+        st.session_state.forecast_end_date = (datetime.today() + relativedelta(months=6)).date()
+    if 'company' not in st.session_state:
+        st.session_state.company = ""
+    if 'job' not in st.session_state:
+        st.session_state.job = ""
+    if 'table_1' not in st.session_state:
+        st.session_state.table_1 = []
+    if 'forecast_table_exists' not in st.session_state:
+        st.session_state.forecast_table_exists = False
+    if 'reportingmonth_data_exists' not in st.session_state:
+        st.session_state.reportingmonth_data_exists = False
+    if 'grid_key' not in st.session_state:
+        st.session_state.grid_key = 0
     if 'engine' not in st.session_state:
         st.session_state.engine = create_engine("postgresql+psycopg2://postgres:NoticePSQL22@127.0.0.1:5432/premier-reports-database", echo=True)
-
+    return [
+        st.session_state.submitted,
+        st.session_state.reportingmonth,
+        st.session_state.company,
+        st.session_state.table_1,
+        st.session_state.forecast_table_exists
+    ]
 
 
 def setLogIn():
