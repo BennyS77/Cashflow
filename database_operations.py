@@ -9,7 +9,11 @@ import pandas as pd
 # from st_aggrid import AgGrid, JsCode
 # import numpy as np
 
-
+def drop_table(table_name):
+    """  Drop the Forecast Data table from the database.  """
+    sql_query = """DROP TABLE """+table_name
+    with st.session_state.engine.begin() as conn:
+        conn.execute(sql_query)
 
 
 def writeDetailsToDatabase(detailsData, table_name):
@@ -32,8 +36,33 @@ def writeDetailsToDatabase(detailsData, table_name):
         index=False,
         dtype=dtype_dict
     )
-    st.write(f'Successfully wrote to database: {table_name}')
+    # st.sidebar.write(f'Successfully wrote to database: {table_name}')
     return 
+
+def appendDatabase(forecast_details, table_name):
+    """ write the Forecast Details information to the database """
+    dtype_dict={}
+    for item in forecast_details.columns:
+        dtype_dict.update({item:Float})
+    dtype_dict.update({
+            "cost_item":String(30),
+            "reporting_month":DateTime,
+            "forecast_end_date":DateTime,
+            "item_start_date":DateTime,
+            "item_end_date":DateTime,
+            "forecast_method":String(20),
+    })
+    forecast_details.to_sql(
+        table_name,
+        st.session_state.engine,
+        if_exists='append',
+        index=False,
+        dtype=dtype_dict
+    )
+    # st.sidebar.write(f'Successfully appended database: {table_name}')
+    return 
+
+
 
 
 def readDetailsFromDatabase(table_name):

@@ -263,7 +263,7 @@ def configureGridOptions(actual_children, forecast_children, pinnedRowData):
         "editable": date_editable,
         'suppressMenu':True,
         'valueFormatter':date_formatter,
-        "maxWidth": 90,
+        "maxWidth": 100,
         "type": ['dateColumn']
       },
       { 
@@ -272,7 +272,7 @@ def configureGridOptions(actual_children, forecast_children, pinnedRowData):
         "editable": date_editable,
         'suppressMenu':True,
         'valueFormatter':date_formatter,
-        "maxWidth": 90,
+        "maxWidth": 100,
       },
       { 
         "headerName": "Forecast",

@@ -4,135 +4,116 @@ import plotly.express as px
 from datetime import datetime
 from st_aggrid import AgGrid
 from dateutil.relativedelta import relativedelta
-from my_config import pageConfig, setSessionData, setLogIn
+from visuals import gantt_chart, bar_chart
+from my_config import pageConfig, setSessionData, setLogIn, page_layout
 from cost_data import getCompanyAndJobList, getJobCostByFiscalPeriod, getEACdata, getJobList, createForecastDetails
-from cost_data import filterFormatData, calc_cost_per_month_and_ACTD, merge_eac_and_calc_percent, forecast_calcs
-from cost_data import calculate_pinned_row_data
+from cost_data import filterFormatData,  update_reporting_month, forecast_calcs, create_forecast_data_table
+from cost_data import calculate_pinned_row_data, get_forecast_data_for_reporting_month, calculate_cost_data_for_the_grid
+from cost_data import create_reporting_month_data
 from aggrid_functions import configActualChildren, configForecastChildren, configureGridOptions
-from database_operations import writeDetailsToDatabase, readDetailsFromDatabase
+from database_operations import writeDetailsToDatabase, readDetailsFromDatabase, drop_table
 
-def update_grid_key():
-    """ Change grid key so that the grid re-initialises after changing the date"""
-    st.session_state.grid_key = st.session_state.grid_key + 1
-
-## 1
 pageConfig()
-
-## 2
 setSessionData()
+# page_layout()
+st.session_state.ready_for_grid = False
+st.markdown("## Cost Forecast")
 
-## 3
-creds, submit_button = setLogIn()
-# if submit_button:
-st.session_state.submitted = True
 
-## 4
-# if st.session_state.submitted:
-company_list, companies_and_jobs = getCompanyAndJobList(creds)
-# company = st.sidebar.selectbox("Company:", company_list, index = len(company_list)-1)
-company = st.sidebar.selectbox("Company:", ['G01'])
 
-## 5
-# try:
-if company:
-    job_list = getJobList(company, companies_and_jobs)
-    # job = st.sidebar.selectbox("Job:", job_list, index = len(job_list)-1 )
-    job = st.sidebar.selectbox("Job:",['PD140479'])
-# except: 
-#     st.write("Log in to retrieve data")
 
-## 6
-# try:
-if job:
-    all_jobs_cost_by_fiscal_period = getJobCostByFiscalPeriod(creds)
-    cost_by_fiscal_period, date_range = filterFormatData(company, job, all_jobs_cost_by_fiscal_period)
-    
-    ## 7
-    index = date_range.index(pd.Period(datetime.today(),freq='M').end_time.date() + relativedelta(months=-1))
-    reporting_month = st.sidebar.selectbox(
+creds = setLogIn()
+
+msg_ph = st.sidebar.empty()
+
+if st.session_state.login_confirmed:
+    # msg_ph.write(  """  Credentials confirmed. Select a company:  """  )
+    company_list, companies_and_jobs = getCompanyAndJobList(creds)
+    # st.sidebar.selectbox("Company:", company_list, index = len(company_list)-1, key='company')
+    st.session_state.company = 'G01'; st.sidebar.write('Company: ', st.session_state.company)
+
+
+
+if st.session_state.company:
+    # msg_ph.write(  """   Company selected. Choose a Job:  """  )
+    job_list = getJobList(st.session_state.company, companies_and_jobs)
+    # st.sidebar.selectbox("Job:", job_list, index = len(job_list)-1, key = 'job' )
+    # st.sidebar.selectbox("Job:", ['PD140479'],  key = 'job' )
+    st.session_state.job = 'PD140479'; st.sidebar.write('Job: ', st.session_state.job)
+
+
+
+if st.session_state.job:
+    # drop_table(('forecast_details_'+st.session_state.company+st.session_state.job).lower())
+    # msg_ph.write(  """   Job selected. Get all 'Actual' cost data for job and then choose Reporting Month: """ )
+    cost_by_calendar_month, date_range = filterFormatData(st.session_state.company, st.session_state.job, creds)
+    eac_data = getEACdata()
+    st.sidebar.selectbox(
                 "Reporting month:",
                 date_range,
-                index = index,
-                format_func=lambda x: x.strftime('%b %Y'),
-                # key="reportingmonth",
-                # on_change = report_change
+                index = (len(date_range)-1),
+                format_func=lambda x: x.strftime('%b %Y') if x!="" else x,
+                key="reporting_month",
+                on_change = update_reporting_month
                 )
-    eac_data = getEACdata()    
 
+
+
+if st.session_state.reporting_month:
+    # msg_ph.write("""   Reporting month has been selected.  """)
     try:
-        forecast_details = readDetailsFromDatabase(('forecast_details_'+company+job).lower())
-        # st.write('Forecast_details table exists.')
-        st.session_state.forecast_table_exists = True
+        # """  Try getting Forecast Data table for the job from database table: """
+        all_forecast_data = readDetailsFromDatabase(('forecast_details_'+st.session_state.company+st.session_state.job).lower())
     except:
-        st.write('Forecast_details table not available. Generating...')
-        forecast_details = createForecastDetails(eac_data.cost_item, reporting_month, st.session_state.forecast_end_date)
-        writeDetailsToDatabase(forecast_details, ('forecast_details_'+company+job).lower())
-
-    forecast_data_for_reporting_month = forecast_details.loc[forecast_details['reporting_month'] == reporting_month]
-    # st.write(forecast_data_for_reporting_month)
-
-    if len(forecast_data_for_reporting_month)>0:
-        # st.write("Data for Reporting Month exists.")
-        forecast_end_date = forecast_data_for_reporting_month['forecast_end_date'].iloc[0]
-        st.session_state.reportingmonth_data_exists = True
-    else:
-        st.write("Data for Reporting Month not available")
-        forecast_end_date = st.sidebar.date_input(
-            "forecast end date",
+        # """  'Forecast Data' table does not exist. Create new table:  """
+        # """  After writing it to the database, on the next rerun it wont go through here  """  
+        st.sidebar.date_input(
+            "Forecast end date for new Forecast Table:",
             (datetime.today() + relativedelta(months=6)).date(),
-            # on_change = report_change
+            key = 'forecast_end_date',
+            # kwargs = dict(the_details = all_forecast_data),
+            on_change = create_forecast_data_table
         )
-    ### Will need to syse placeholdker fpor this
-    # forecast_end_date = st.sidebar.date_input(
-    #         "forecast end date",
-    #         forecast_end_date,
-    #         # on_change = report_change
-    #     )
+    
+    # """  Extract Reporting Month data from the Forecast Data  """
+    forecast_data_for_reporting_month = all_forecast_data.loc[all_forecast_data['reporting_month'] == st.session_state.reporting_month]
+    if len(forecast_data_for_reporting_month)>0:
+        # """ If Forecast Data exists for month exists, get the Forecast End Date """
+        st.session_state.forecast_end_date = forecast_data_for_reporting_month['forecast_end_date'].iloc[0]
+        st.session_state.ready_for_grid = True
+    else:
+        # """ If Forecast Data = Empty, create default data for the month and add it to the database table  """
+        st.sidebar.date_input(
+            "Choose Forecast End Date for the new Reporting Month:",
+            (datetime.today() + relativedelta(months=6)).date(),
+            key = 'forecast_end_date',
+            kwargs = dict(the_details = all_forecast_data),
+            on_change = create_reporting_month_data
+        )
 
-    # st.write(f"Reporting month: {reporting_month}")
-    # st.write(f"Forecast end Date: {forecast_end_date}")
 
-    ## 9
-    cost_with_ACTD = calc_cost_per_month_and_ACTD(cost_by_fiscal_period, date_range[0], reporting_month)
-    ### The order/details of the merge needs to be updated 
-    cost_data = merge_eac_and_calc_percent(cost_with_ACTD, eac_data, date_range[0], reporting_month)
 
-    ## 13  (I know right, something's weird with the numbering...)
-    cost_display_data = forecast_calcs(cost_data, forecast_data_for_reporting_month)
 
-    pinned_row_data = calculate_pinned_row_data(cost_display_data, date_range, reporting_month, forecast_end_date)
-    actual_children = configActualChildren(date_range[0], reporting_month)
-    forecast_children = configForecastChildren(reporting_month, forecast_end_date)
+
+
+if st.session_state.ready_for_grid:
+    grid_cost_data, pinned_row_data = calculate_cost_data_for_the_grid(cost_by_calendar_month, forecast_data_for_reporting_month, date_range)
+    actual_children = configActualChildren(date_range[0], st.session_state.reporting_month)
+    forecast_children = configForecastChildren(st.session_state.reporting_month, st.session_state.forecast_end_date)
     gridOptions, custom_css = configureGridOptions(actual_children, forecast_children, pinned_row_data)
+    # st.write(grid_cost_data)
+    grid_cost_data['item_start_date']=grid_cost_data['item_start_date'].apply(lambda x: x.strftime("%d/%m/%Y"))
+    grid_cost_data['item_end_date']=grid_cost_data['item_end_date'].apply(lambda x: x.strftime("%d/%m/%Y"))
 
-    ##### GANTT CHART ######
 
-    gantt_df = pd.DataFrame([
-        dict(Cost_Item="Cost Item 110", Start='2022-01-01', Finish='2022-02-28', complete=50),
-        dict(Cost_Item="Cost Item 120", Start='2022-02-01', Finish='2022-04-15', complete=35),
-        dict(Cost_Item="Cost Item 230", Start='2022-01-20', Finish='2022-05-3', complete=70),
-        dict(Cost_Item="Cost Item 250", Start='2022-01-01', Finish='2022-03-15', complete=20),
-        dict(Cost_Item="Cost Item 325", Start='2022-02-01', Finish='2022-06-15', complete=45),
-        dict(Cost_Item="Cost Item 410", Start='2022-01-20', Finish='2022-05-3', complete=90)
-    ])
 
-    fig = px.timeline(gantt_df, x_start="Start", x_end="Finish", y="Cost_Item", color='complete')
-    fig.update_yaxes(autorange="reversed") # otherwise tasks are listed from the bottom up
-    fig.update_layout(
-            width=1600,
-            height=400,
-            margin=dict(
-                l=1,
-                r=0,
-                b=0,
-                t=1
-                )
-            )
+    ## Chart at the top ##
+    # fig = gantt_chart()
+    fig = bar_chart()
     st.plotly_chart(fig)
 
-
     grid_response = AgGrid(
-      dataframe = cost_display_data,
+      dataframe = grid_cost_data,
       custom_css = custom_css,
       gridOptions = gridOptions, 
       height = 700,
@@ -155,14 +136,6 @@ if job:
         # "material" - material
       )
 ##7 
-
-
-
-
-
-# try:
-# except:
-#     st.write("no data yet")
 
 
 

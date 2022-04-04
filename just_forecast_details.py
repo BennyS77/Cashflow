@@ -50,21 +50,14 @@ reporting_month = st.sidebar.selectbox(
     )
 
 cost_with_ACTD = calc_cost_per_month_and_ACTD(cost_by_fiscal_period, date_range[0], reporting_month)
-# st.write('cost_with_ACTD')
-# st.write(cost_with_ACTD)
 
 cost_data = merge_eac_and_calc_percent(cost_with_ACTD, eac_data, date_range[0], reporting_month)
-# st.write('Actual cost data:')
-# st.write(cost_data)
 
 
 if st.session_state.table_1_exists == False:
     # st.write(" !! New Job !!  Database table does not exist. Creating....")
     st.session_state.table_1 = createForecastDetails(eac_data.cost_item, reporting_month, forecast_end_date)
     st.session_state.table_1_exists = True
-
-# st.write('st.session_state.table_1')
-# st.write(st.session_state.table_1)
 
 
 forecast_data_for_reporting_month = st.session_state.table_1.loc[st.session_state.table_1['reporting_month'] == reporting_month.date()]
