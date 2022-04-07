@@ -5,8 +5,8 @@ from cashflow_jscode import value_formatter, js_changed, js_clicked, row_height,
 from cashflow_jscode import forecast_percent_formatter, sparkline_data, sparkline_params, amount_formatter, cell_style_date
 from cashflow_jscode import date_formatter, cell_style_percent, cell_style_amount
 
-def configActualChildren(firstMonth, lastMonth):
-    actualChildren=[{ "headerName": "Actual Costs To Date",
+def config_revenue_actual_children(firstMonth, lastMonth):
+    actualChildren=[{ "headerName": "Claimed To Date",
         "field": "ACTD",
         'columnGroupShow': 'closed',
         'suppressMenu':True,
@@ -58,7 +58,7 @@ def configActualChildren(firstMonth, lastMonth):
     return actualChildren
 
 
-def configForecastChildren(report_date, end_date):
+def config_revenue_forecast_children(report_date, end_date):
   forecastChildren=[{
       "headerName":"",
       "minWidth":95,
@@ -181,7 +181,7 @@ custom_css= {
   }
 
 
-def configureGridOptions(actual_children, forecast_children, pinnedRowData):
+def configure_revenue_grid_options(actual_children, forecast_children, pinnedRowData):
   gridOptions={
     "defaultColDef": {
       # "minWidth": 50,
@@ -201,7 +201,7 @@ def configureGridOptions(actual_children, forecast_children, pinnedRowData):
         # 'pinned':'left',
         "maxWidth": 60,
       },
-      { "headerName": "Cost Item",
+      { "headerName": "Claim Line ID",
         "field": "cost_item",
         "headerTooltip":"The Cost Item code",
         # 'suppressMenu':True,

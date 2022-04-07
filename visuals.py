@@ -26,31 +26,45 @@ def gantt_chart():
             )
     return fig
 
-def bar_chart():
-    months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sept', 'Oct', 'Nov', 'Dec']
-    y1 = [43,34,32,42,34,32,46,34,32,52,48,35]
-    y2 = [41,35,41,51,35,41,48,35,41,45,34,32]
+
+
+def bar_chart(months, cost, revenue, cashflow, no_of_actual_months):
+    color_for_revenue = 'rgba(0, 159, 183, 0.8)'
+    color_for_revenue_shaded = 'rgba(0, 159, 183, 0.4)'
+    color_for_cost = 'rgba(230, 95, 92, 0.8)'
+    color_for_cost_shaded = 'rgba(230, 95, 92, 0.4)'
+    colors_revenue = [color_for_revenue,] * len(months)
+    colors_cost = [color_for_cost,] * len(months)
+    for i in range(no_of_actual_months):
+        colors_revenue[i] = color_for_revenue_shaded
+    for i in range(no_of_actual_months):
+        colors_cost[i] = color_for_cost_shaded
+
     fig = go.Figure(data=[
-        go.Bar(name= 'Costs', x=months, y=y1, marker_color = 'rgba(50,80,50,0.7)'),
-        go.Bar(name= 'Revenue', x=months, y=y2)
+        go.Bar(name= 'Cost', x=months, y=cost, marker_color = colors_cost),
+        go.Bar(name= 'Revenue', x=months, y=revenue, marker_color = colors_revenue),
         ])
+    fig.add_trace(go.Line(name= 'Cashflow', x=months, y=cashflow, marker_color = 'rgb(14, 52, 160)'))
+
     fig.update_layout(
         barmode='group',
+        yaxis=dict(title='Amount, $'),
         xaxis_tickangle=0,
         # title_text='Cashflow graph',
         legend=dict(
-            x=0.0,
-            y=1.4,
+            x=0.84,
+            y=1.2,
             bgcolor='rgba(255, 255, 255, 0)',
-            bordercolor='rgba(255, 255, 255, 0)'
+            bordercolor='rgba(255, 255, 255, 0)',
+            orientation='h',
             ),
-        width=1560,
+        width=1630,
         height=200,
         margin=dict(
-            l=1,
+            l=0,
             r=0,
             b=0,
-            t=50
+            t=0
             )
         )
 
