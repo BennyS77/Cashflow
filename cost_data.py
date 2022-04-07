@@ -325,9 +325,12 @@ def user_input_variables():
             )
     
     if st.session_state.login_confirmed == False:
+        st.sidebar.markdown("# ")
+        st.sidebar.markdown("## Login")
         with st.sidebar.form('credentials', clear_on_submit=True):
-            client_id = st.text_input('Client ID:') 
-            username = st.text_input('Username:')  
+            # st.markdown("## Login")
+            client_id = st.text_input('Client ID:', 'test client') 
+            username = st.text_input('Username:','test username')  
             password = st.text_input('Password:',type="password") 
             client_id = '317016'
             username = 'BenStewart'
