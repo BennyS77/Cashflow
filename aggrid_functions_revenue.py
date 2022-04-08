@@ -206,7 +206,7 @@ def configure_revenue_grid_options(actual_children, forecast_children, pinnedRow
         "headerTooltip":"The Cost Item code",
         # 'suppressMenu':True,
         'pinned':'left',
-        "maxWidth": 100,
+        "maxWidth": 150,
         'colSpan':col_span
       },
       { "headerName": "Description",
@@ -215,7 +215,7 @@ def configure_revenue_grid_options(actual_children, forecast_children, pinnedRow
         # 'suppressMenu':True,
         "maxWidth": 160,
       },
-      { "headerName": "Estimate At Completion",
+      { "headerName": "Contract Sum",
         "field": "EAC",
         'suppressMenu':True,
         "cellClass": 'ag-right-aligned-cell',

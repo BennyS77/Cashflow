@@ -43,3 +43,17 @@ st.markdown("""
 }
 </style>
     """, unsafe_allow_html=True)
+
+
+#### Change all button colors
+st.markdown("""
+<style>
+div.stButton > button:first-child {
+    background-color: #0099ff;
+    color:#ffffff;
+}
+div.stButton > button:hover {
+    background-color: #00ff00;
+    color:#ff0000;
+    }
+</style>""", unsafe_allow_html=True)

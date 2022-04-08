@@ -204,9 +204,9 @@ def configureGridOptions(actual_children, forecast_children, pinnedRowData):
       { "headerName": "Cost Item",
         "field": "cost_item",
         "headerTooltip":"The Cost Item code",
-        # 'suppressMenu':True,
+        'suppressMenu':True,
         'pinned':'left',
-        "maxWidth": 100,
+        "maxWidth": 90,
         'colSpan':col_span
       },
       { "headerName": "Description",
@@ -288,7 +288,7 @@ def configureGridOptions(actual_children, forecast_children, pinnedRowData):
     "debug":True,
     "autoGroupColumnDef": {
         "field":"autoGroup",
-        "headerName": '',
+        "headerName": 'Cost Group',
         'pinned':'left',
         "minWidth": 40,
         "maxWidth": 140,

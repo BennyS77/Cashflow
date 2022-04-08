@@ -231,6 +231,8 @@ def after_selecting_company():
     """
         Create a Job list based on the selected Company
     """
+    # st.session_state.company='G01'
+    # st.sidebar.write(st.session_state.company)
     st.session_state.job_list = st.session_state.companies_and_jobs['Job_Number'].where(st.session_state.companies_and_jobs['Company_Code']==st.session_state.company).tolist()
     st.session_state.job_list.append("")
 
@@ -275,7 +277,7 @@ def after_selecting_reporting_month():
     except:
         """  Data for the Job does NOT exist in the database. """
         st.session_state.forecast_table_exists = False
-
+    st.session_state.grid_key = st.session_state.grid_key + 1
 
 def login_form(credentials):
     """
@@ -292,13 +294,15 @@ def user_input_variables():
     """
 
     st.sidebar.selectbox( label = "Company:",
+                # st.session_state.company_list = ['test', '']
                 options = st.session_state.company_list,
                 index = len(st.session_state.company_list)-1,
+                # index = 1,
                 on_change = after_selecting_company,
                 key ='company',
                 disabled = not st.session_state.login_confirmed
                 )
-    st.session_state.job_list = ["PD140479", "TMR456", '']
+    # st.session_state.job_list = ["PD140479", "TMR456", '']
     st.sidebar.selectbox( label = "Job:",
                 options = st.session_state.job_list,
                 index = len(st.session_state.job_list)-1,

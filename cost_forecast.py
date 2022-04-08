@@ -42,8 +42,8 @@ def page_layout():
     col1, col2, col3, col4 = st.columns([3,1,1,1])
     with col1:
         st.markdown(html_heading, unsafe_allow_html=True)  
-    with col2:
-        st.button("COST", on_click=cost_click)
+    with col2:  
+        st.button("COST",  on_click=cost_click)
     with col3:
         st.button("REVENUE", on_click=revenue_click)
     with col4:
@@ -110,7 +110,15 @@ if st.session_state.for_testing == True:
 
 if st.session_state.ready_for_grid:
 
+    st.sidebar.markdown("# ")
+    st.sidebar.markdown("# ")
+
     include_actuals = st.sidebar.checkbox("Include historical data in plot:", value=True)
+    include_cashflow = st.sidebar.checkbox("Include monthly cashflow in plot:", value=True)
+    include_cumcashflow = st.sidebar.checkbox("Include cumulative cashflow in plot:", value=False)
+    include_completed_item = st.sidebar.checkbox("Include completed items in table:", value=True)
+    grid_height = st.sidebar.slider("Table height:", min_value=300, max_value=1200, value=600, step=20, key='grid_height')
+    # grid_height
     # show_cost = st.sidebar.checkbox("Cost forecast:", value=True)
 
     cost_data, date_range = get_cost_data_and_date_range()
@@ -163,10 +171,10 @@ if st.session_state.ready_for_grid:
             dataframe = grid_cost_data,
             custom_css = custom_css,
             gridOptions = gridOptions, 
-            height = 600,
+            height = grid_height,
             enable_enterprise_modules=True,
             fit_columns_on_grid_load=False,
-            key = 34,   #- set a key to stop the grid reinitialising when the dataframe changes
+            key = st.session_state.grid_key,   #- set a key to stop the grid reinitialising when the dataframe changes
             reload_data=True,  
             #   reload_data=False,  
             data_return_mode='AS_INPUT',
@@ -184,7 +192,10 @@ if st.session_state.ready_for_grid:
         )
 
         # st.write(grid_response['data'].head(5))
-        diff = grid_response['data'].compare(grid_cost_data)
+        try:
+            diff = grid_response['data'].compare(grid_cost_data)
+        except:
+            diff = 0
         # st.write(diff.head(5))
         if len(diff) > 0:
             changed_column = diff.columns[0][0]
@@ -252,7 +263,10 @@ if st.session_state.ready_for_grid:
         )
 
             # st.write(grid_response['data'].head(5))
-        diff = grid_response['data'].compare(grid_cost_data)
+        try:    
+            diff = grid_response['data'].compare(grid_cost_data)
+        except:
+            diff = 0
             # st.write(diff.head(5))
         if len(diff) > 0:
                 changed_column = diff.columns[0][0]
@@ -266,7 +280,7 @@ if st.session_state.ready_for_grid:
                 # st.write("index2 = ", diff.index[0])
                 cost_item_changed = grid_cost_data[(grid_cost_data.index==diff.index[0])].cost_item.iloc[0]
                 # st.write("cost_item_changed =  ", cost_item_changed)
-                st.write(f"new_value:  '{new_value}' in column: '{changed_column}' for item: '{cost_item_changed}'")
+                # st.write(f"new_value:  '{new_value}' in column: '{changed_column}' for item: '{cost_item_changed}'")
                 
                 if changed_column == 'item_end_date' or changed_column == 'item_start_date' or new_value == 'Timeline':
                     df = st.session_state.reporting_month_forecast_data

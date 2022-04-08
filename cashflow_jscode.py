@@ -14,137 +14,185 @@ dropdown_jscode = JsCode("""
 
 editable = JsCode("""
   function (params) {
-    if (params.data.forecastMethod === "Manual") {
+    if (params.data.forecast_method === "Manual") {
       return 'true';
     }
   };
   """)
 
-
-cellEditorSelector = JsCode("""
+date_editable = JsCode("""
   function (params) {
-    if (params.data.forecastMethod === "Manual") {
-      return {
-        component: 'agRichSelectCellEditor',
-        params: {
-          values: [30, 40],
-        },
-      };
+    if (params.data.forecast_method === "Timeline") {
+      return 'true';
     }
-    if (params.data.forecastMethod === "Timeline") {
-      return {
-        component: 'ttt',
-        params: {
-          values: [30, 40],
-        },
-      };
-    }
-  }
+  };
   """)
 
-
-
-cell_style = JsCode("""
+cell_style_date = JsCode("""
   function (params) {
-    if (params.data.forecastMethod == "Manual") {
-      return {'color':'black','backgroundColor':'rgba(250,250,250,1)'};
-    } else {
-      return {'color':'black','backgroundColor':'white'};
-      }
+    if (params.node.group != true && params.data.forecast_method == "Manual") {
+      return {'color':'rgba(210,210,210,1)'};
+    }
+    if (params.node.group != true && params.data.forecast_method == "Timeline") {
+      return {'color':'rgba(60,60,60,1)'};
+    }
 };
 """)
 
-cell_style2 = JsCode("""
+cell_style_percent = JsCode("""
   function (params) {
-    if (params.data.forecastMethod == "Timeline") {
-      return {'color':'black','backgroundColor':'rgba(250,250,250,1)'};
-    } else {
-      return {'color':'black','backgroundColor':'white'};
-      }
+    let col_group = params.colDef.field.substr(0,8);
+    let new_col = col_group.concat("$");
+    if (params.node.group != true && params.data.forecast_method == "Manual") {
+      return {
+        'color':'rgba(60,60,60,1)',
+        'border-style':'inset',
+        'border-color': 'rgba(220,220,220,1)',
+        'border-width': '2px'
+      };
+    }
+    if (params.node.group != true && params.data.forecast_method == "Timeline" && params.data[new_col]>0) {
+      return {
+        'color':'rgba(60,60,60,1)',
+        'border-style':'none',
+        'background-color':'rgba(230, 95, 92, 0.1)',
+/*        'background-image': 'linear-gradient(to right, rgba(255,255,255,0), rgba(255,255,255,1), rgba(255,255,255,0))'  */
+      };
+    }  
+};
+""")
+
+cell_style_amount = JsCode("""
+  function (params) {
+    if (params.node.group != true  && params.node.rowPinned != 'top' && params.value>0) {
+      return {
+        'color':'rgba(60,60,60,1)',
+/*        'border-style':'none',  */
+        'background-color':'rgba(230, 95, 92, 0.1)',
+      };
+    }  
 };
 """)
 
 
-js = JsCode("""function(e) {
+
+
+js_changed = JsCode("""function(e) {
     let api = e.api;
     let rowIndex = e.rowIndex;
-    let col_changed = e.column.colId;
-    let new_value = e.newValue;
-    let old_value = e.oldValue;
-    let rowNode = api.getRowNode(rowIndex);
-    console.log('onCellValueChanged fired!!!');
-    console.log(rowIndex, rowNode);
-    console.log('api: ', api);
-    if (new_value === 'Manual' & col_changed === "forecastMethod") {
+    let old_value = e.oldValue;    
+    console.log('cell changed....!!!');
+    console.log('node: ', e.node);
+    console.log('new value: ', e.newValue);
+    console.log('column: ', e.column.colId);
+    if (e.column.colId == "forecast_method") {
       api.refreshCells({
         force: true,
-        rowNodes: [rowNode],
+        rowNodes: [e.node],
         });
     }
-    if (new_value === 'Timeline' & col_changed === "forecastMethod") {
-      console.log('reset key for grid and reinitialize with data in dataframe');
-
-      api.refreshCells({
-        force: true,  
-        rowNodes: [rowNode], 
-        });
-      }
     };
 """)
 
+js_clicked = JsCode("""function(e) {
+    let api = e.api;
+    let rowIndex = e.rowIndex;
+    console.log('cell clicked....!!!!!!');
+    console.log('api: ', api);
+    console.log('rowIndex: ', rowIndex);
+    console.log('node: ', e.node);
+    console.log('id: ', e.node.id);
+    console.log('key: ', e.node.key);
+    console.log('new value: ', e.newValue);
+    console.log('group: ', e.node.group);
+    console.log('footer: ', e.node.footer);
+    console.log('col_clicked: ', e.column.colId);
+    };
+""")
 
-
-vg_ETC = JsCode("""
+row_height = JsCode("""
   function(params) {
-    return parseFloat(params.data.EAC-params.data.ACTD).toLocaleString('en',{minimumFractionDigits: 2,  maximumFractionDigits: 2});
-  };
-  """)
-
-vg_forecastAmount = JsCode(""" function(params) {
-  let ETC = params.data.EAC - params.data.ACTD;
-  if (params.data.forecastMethod === 'Timeline') {
-      return ETC/3
-  } else {
-      return 0
-    }
-};""")
-
-vg_forecastPercent = JsCode(""" function(params) {
-  let ETC = params.data.EAC - params.data.ACTD;
-  let amountSoFar = ETC/3;
-  if (params.data.forecastMethod === 'Timeline') {
-      return amountSoFar/params.data.EAC
-  } else {
-      return 0
-    }
-};""")
-
-
-showDaysFormatter  = JsCode(""" function(params) {
-  if (params.data.forecastMethod == 'Timeline') {
-      return params.data.numDaysDuration
-  } else {
-      return '-'
-    }
-};""")
-
-
-
-EAC_vf = JsCode("""
-  function(params) {
-    if (params.node.rowPinned === 'top') {
-        return parseFloat(params.data.EAC).toLocaleString('en',{minimumFractionDigits: 2,  maximumFractionDigits: 2})
+    if (params.node.rowPinned == 'top') {
+      return 30;
     } else {
-       return parseFloat(params.data.EAC).toLocaleString('en',{minimumFractionDigits: 2,  maximumFractionDigits: 2})
-    }
+       return 30;
+      }
   };
   """)
-ACTD_vf = JsCode("""
+
+col_span = JsCode("""
   function(params) {
-    if (params.node.rowPinned === 'top') {
-        return ""
+    if (params.node.rowPinned == 'top') {
+      return 2;
     } else {
-       return parseFloat(params.data.ACTD).toLocaleString('en',{minimumFractionDigits: 2,  maximumFractionDigits: 2})
+       return 1;
+      }
+  };
+  """)
+
+date_formatter = JsCode("""
+  function(params) {
+    if (params.node.group != true && params.node.rowPinned != 'top' && params.data.forecast_method == "Timeline") {
+      return params.value
+    }
+    if (params.node.group != true && params.node.rowPinned != 'top' && params.data.forecast_method == "Manual") {
+      return "-"
+    }
+  };
+  """)
+
+
+value_formatter = JsCode("""
+  function(params) {
+    if (params.node.group != true && params.node.rowPinned != 'top') {
+      return parseFloat(params.value).toLocaleString('en',{minimumFractionDigits: 0,  maximumFractionDigits: 0})
+    }
+    if (params.node.footer == true) {
+      return parseFloat(params.value).toLocaleString('en',{minimumFractionDigits: 0,  maximumFractionDigits: 0})
+    }
+    if (params.node.leafGroup == true && params.node.expanded == false ) {
+      return parseFloat(params.value).toLocaleString('en',{minimumFractionDigits: 0,  maximumFractionDigits: 0})
+    }
+    if (params.node.rowPinned === 'top') {
+      return parseFloat(params.value).toLocaleString('en',{minimumFractionDigits: 0,  maximumFractionDigits: 0})
+    }
+  };
+  """)
+
+
+percent_formatter = JsCode("""
+  function(params) {
+    let col_group = params.colDef.field.substr(0,7);
+    let new_col = col_group.concat("$");
+    if (params.node.group == true && params.node.footer == true) {
+        return parseFloat(params.node.aggData[new_col]/params.node.aggData.EAC*100).toFixed(1);
+    }
+    if (params.node.group != true) {
+       return parseFloat(params.value*100).toFixed(1);
+    }
+    if (params.node.leafGroup == true && params.node.expanded == false ) {
+        return parseFloat(params.node.aggData[new_col]/params.node.aggData.EAC*100).toFixed(1);
+    }
+  };
+  """)
+
+amount_formatter = JsCode("""
+  function(params) {
+    if (params.value > 0) {
+      if (params.node.group != true && params.node.rowPinned != 'top') {
+        return parseFloat(params.value).toLocaleString('en',{minimumFractionDigits: 0,  maximumFractionDigits: 0})
+      }
+      if (params.node.footer == true) {
+        return parseFloat(params.value).toLocaleString('en',{minimumFractionDigits: 0,  maximumFractionDigits: 0})
+      }
+      if (params.node.leafGroup == true && params.node.expanded == false ) {
+        return parseFloat(params.value).toLocaleString('en',{minimumFractionDigits: 0,  maximumFractionDigits: 0})
+      }
+      if (params.node.rowPinned === 'top') {
+        return parseFloat(params.value).toLocaleString('en',{minimumFractionDigits: 0,  maximumFractionDigits: 0})
+      }
+    } else {
+      return ''
     }
   };
   """)
@@ -152,8 +200,153 @@ ACTD_vf = JsCode("""
 
 
 
+forecast_percent_formatter = JsCode("""
+  function(params) {
+      let col_group = params.colDef.field.substr(0,8);
+      let new_col = col_group.concat("$");
+      if (params.node.group == true && params.node.footer == true) {
+          return parseFloat(params.node.aggData[new_col]/params.node.aggData.EAC*100).toFixed(1);
+      }
+      if (params.node.group != true && params.node.rowPinned != 'top') {
+        if (params.data[new_col]>0) {
+          return parseFloat(params.value).toFixed(1);
+        } else {
+          return '' ;
+        }
+      }
+      if (params.node.leafGroup == true && params.node.expanded == false ) {
+          return parseFloat(params.node.aggData[new_col]/params.node.aggData.EAC*100).toFixed(1);
+      }
+      if (params.node.rowPinned == 'top') {
+        return parseFloat(params.value*100).toFixed(1);
+      }
+
+  };
+  """)
+
+sparkline_data = JsCode("""
+  function(params) {
+    if (params.node.group != true) {
+      return [params.data.ACTD/params.data.EAC*100];
+    } 
+    if (params.node.group == true && params.node.footer == true) {
+      return [params.node.aggData.ACTD/params.node.aggData.EAC*100];
+    }
+    if (params.node.leafGroup == true && params.node.expanded == false ) {
+      return [params.node.aggData.ACTD/params.node.aggData.EAC*100];
+    }
+    if (params.node.leafGroup == true && params.node.expanded == true ) {
+      return [];
+    }
+  }
+""")
 
 
+sparkline_params = JsCode("""
+  function(params) {
+    if (params.node.rowPinned == 'top') {
+      return {
+                sparklineOptions: {
+                  type: 'bar',
+                  fill: 'rgba(14, 52, 160,0.9)',
+                  stroke: 'rgb(220,220,40,1)',
+                  highlightStyle: {
+                    fill: 'rgb(236, 195, 11)',
+                  },
+                  label: {
+                    enabled: true,
+                    color: 'white',
+                    fontSize: 10,
+                    fontWeight: 'bold',
+                    formatter: function (params) {
+                      return parseFloat(params.value).toLocaleString('en',{minimumFractionDigits: 0,  maximumFractionDigits: 0});
+                    },
+                  },
+                  paddingOuter: 0,
+                  padding: {
+                    top: 0,
+                    bottom: 0,
+                  },
+                  valueAxisDomain: [0, 100],
+                  axis: {
+                    strokeWidth: 0,
+                  },
+                  tooltip: {
+                    enabled: false,
+                  },
+                }
+        };
+    }
+
+    if (params.node.group == true) {
+        return {
+                sparklineOptions: {
+                  type: 'bar',
+                  fill: 'rgba(14, 52, 160,0.8)',
+                  stroke: 'rgba(20,220,220,1)',
+                  highlightStyle: {
+                    fill: 'rgb(236, 195, 11)',
+                  },
+                  label: {
+                    enabled: true,
+                    color: 'white',
+                    fontSize: 10,
+                    fontWeight: 'bold',
+                    formatter: function (params) {
+                      return parseFloat(params.value).toLocaleString('en',{minimumFractionDigits: 0,  maximumFractionDigits: 0});
+                    },
+                  },
+                  paddingOuter: 0.1,
+                  padding: {
+                    top: 0,
+                    bottom: 0,
+                  },
+                  valueAxisDomain: [0, 100],
+                  axis: {
+                    strokeWidth: 0,
+                  },
+                  tooltip: {
+                    enabled: false,
+                  },
+                }
+        };
+    }
+
+    if (params.node.group != true) {
+        return {
+                sparklineOptions: {
+                  type: 'bar',
+                  fill: 'rgba(14, 52, 160,0.6)',
+                  stroke: 'rgb(220,220,40,1)',
+                  highlightStyle: {
+                    fill: 'rgb(236, 195, 11)',
+                  },
+                  label: {
+                    enabled: true,
+                    color: 'white',
+                    fontSize: 10,
+                    fontWeight: 'bold',
+                    formatter: function (params) {
+                      return parseFloat(params.value).toLocaleString('en',{minimumFractionDigits: 0,  maximumFractionDigits: 0});
+                    },
+                  },
+                  paddingOuter: 0.2,
+                  padding: {
+                    top: 0,
+                    bottom: 0,
+                  },
+                  valueAxisDomain: [0, 100],
+                  axis: {
+                    strokeWidth: 0,
+                  },
+                  tooltip: {
+                    enabled: false,
+                  },
+                }
+        };
+    }
+  };
+""")
 
 
 
@@ -190,6 +383,23 @@ ACTD_vf = JsCode("""
 
 #     }
 # *****/
+
+
+# if (new_value === 'Manual' & col_changed === "forecastMethod") {
+#       api.refreshCells({
+#         force: true,
+#         rowNodes: [rowNode],
+#         });
+#     }
+#     if (new_value === 'Timeline' & col_changed === "forecastMethod") {
+#       console.log('reset key for grid and reinitialize with data in dataframe');
+
+#       api.refreshCells({
+#         force: true,  
+#         rowNodes: [rowNode], 
+#         });
+#       }
+
 
 #  var Month_0_$ = rowNode.data.Month_0_percent /100 * rowNode.data.EAC;
 #         rowNode.setDataValue('Month_0_$', Month_0_$);
