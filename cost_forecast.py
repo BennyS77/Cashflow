@@ -8,7 +8,7 @@ from dateutil.relativedelta import relativedelta
 from visuals import gantt_chart, bar_chart
 from my_config import page_config_and_session_state
 from cost_data import  calculate_cost_data_for_the_grid,get_cost_data_and_date_range, get_eac_data
-from cost_data import user_input_variables, login_form
+from cost_data import user_input_variables, page_layout
 from aggrid_functions import configActualChildren, configForecastChildren, configureGridOptions
 from aggrid_functions_revenue import configure_revenue_grid_options, config_revenue_forecast_children, config_revenue_actual_children
 from aggrid_functions_summary import configure_summary_grid_options
@@ -16,47 +16,14 @@ from database_operations import writeDetailsToDatabase, readDetailsFromDatabase,
 
 
 
-page_config_and_session_state()
+# page_config_and_session_state()
 
-def cost_click():
-    st.session_state.cost_clicked = True
-    st.session_state.revenue_clicked = False
-    st.session_state.summary_clicked = False
-def revenue_click():
-    st.session_state.revenue_clicked = True
-    st.session_state.cost_clicked = False
-    st.session_state.summary_clicked = False
-def summary_click():
-    st.session_state.summary_clicked = True
-    st.session_state.cost_clicked = False
-    st.session_state.revenue_clicked = False
+testing = False
 
-# st.session_state
+if testing == False:
 
-def page_layout():
-    """
-        Set the page template
-    """
-    html_heading = '<h1 style="text-align: left;padding:0px;padding-bottom:0px;margin:0px">Cashflow</h1>'
-    html_line = """<hr style="height:4px;padding:0px;margin:0px;border:none;color:#D3D3D3;background-color:#D3D3D3;" /> """
-    col1, col2, col3, col4 = st.columns([3,1,1,1])
-    with col1:
-        st.markdown(html_heading, unsafe_allow_html=True)  
-    with col2:  
-        st.button("COST",  on_click=cost_click)
-    with col3:
-        st.button("REVENUE", on_click=revenue_click)
-    with col4:
-        st.button("SUMMARY", on_click=summary_click)
-    
-    st.markdown(html_line, unsafe_allow_html=True)
-    st.sidebar.markdown("# Report details:")
-    return
-
-
-if st.session_state.for_testing == False:
-
-    page_layout()
+    if st.session_state.new_session == True:
+        page_layout()
 
     user_input_variables()
 
@@ -88,7 +55,7 @@ if st.session_state.for_testing == False:
         """ 
 
 
-if st.session_state.for_testing == True:
+if testing == True:
     st.session_state.creds = {"username":'317016'+'\\'+'BenStewart', "password":'Woerifjoi439856'}
     st.session_state.company = 'G01'
     st.session_state.job = 'PD140479'
@@ -98,7 +65,6 @@ if st.session_state.for_testing == True:
         st.session_state.all_forecast_data = readDetailsFromDatabase()
         st.session_state.reporting_month_forecast_data = st.session_state.all_forecast_data.loc[st.session_state.all_forecast_data['reporting_month'] == st.session_state.reporting_month]
         # st.write("reporting_month_forecast_data from database...")
-        st.session_state.new_session = False
     # else:
         # st.write("reporting_month_forecast_data from session state...")
     # st.write(st.session_state.reporting_month_forecast_data.head(5))
@@ -113,13 +79,8 @@ if st.session_state.ready_for_grid:
     st.sidebar.markdown("# ")
     st.sidebar.markdown("# ")
 
-    include_actuals = st.sidebar.checkbox("Include historical data in plot:", value=True)
-    include_cashflow = st.sidebar.checkbox("Include monthly cashflow in plot:", value=True)
-    include_cumcashflow = st.sidebar.checkbox("Include cumulative cashflow in plot:", value=False)
     include_completed_item = st.sidebar.checkbox("Include completed items in table:", value=True)
     grid_height = st.sidebar.slider("Table height:", min_value=300, max_value=1200, value=600, step=20, key='grid_height')
-    # grid_height
-    # show_cost = st.sidebar.checkbox("Cost forecast:", value=True)
 
     cost_data, date_range = get_cost_data_and_date_range()
     grid_cost_data, pinned_row_data = calculate_cost_data_for_the_grid(cost_data, st.session_state.reporting_month_forecast_data, date_range)
@@ -152,13 +113,9 @@ if st.session_state.ready_for_grid:
     if len(st.session_state.revenue_amounts)==0:
             st.session_state.revenue_amounts = [item *  (0.8 + (random.random()*0.7)) for item in all_cost_amounts]
 
-    if include_actuals:
-        cashflow =[int(item1 - item2) for (item1, item2) in zip(st.session_state.revenue_amounts,all_cost_amounts)]
-        fig = bar_chart(all_months, all_cost_amounts, st.session_state.revenue_amounts, cashflow, number_of_actual_months)
-    else:
-        cashflow =[int(item1 - item2) for (item1, item2) in zip(st.session_state.revenue_amounts[number_of_actual_months-1:],actual_cost_amounts)]
-        actuals = 0
-        fig = bar_chart(forecast_months, forecast_cost_amounts, st.session_state.revenue_amounts[number_of_actual_months:], cashflow, actuals)
+    cashflow =[int(item1 - item2) for (item1, item2) in zip(st.session_state.revenue_amounts,all_cost_amounts)]
+    fig = bar_chart(all_months, all_cost_amounts, st.session_state.revenue_amounts, cashflow, number_of_actual_months)
+    
 
 
     ## Chart at the top ##
@@ -228,85 +185,13 @@ if st.session_state.ready_for_grid:
         #     st.write("no changes detected")
 
 
-    if st.session_state.revenue_clicked:
-        # st.write('Revenue:')
-        grid_revenue_data = grid_cost_data
-        actual_children = config_revenue_actual_children(date_range[0], st.session_state.reporting_month)
-        forecast_children = config_revenue_forecast_children(st.session_state.reporting_month, st.session_state.forecast_end_date)
-        gridOptions, custom_css = configure_revenue_grid_options(actual_children, forecast_children, pinned_row_data)
-        # grid_cost_data['item_start_date']=grid_cost_data['item_start_date'].apply(lambda x: x.strftime("%d/%m/%Y"))
-        # grid_cost_data['item_end_date']=grid_cost_data['item_end_date'].apply(lambda x: x.strftime("%d/%m/%Y"))
-        # grid_cost_data.drop('current_month', inplace=True, axis=1)
-
-        grid_response = AgGrid(
-            dataframe = grid_revenue_data,
-            custom_css = custom_css,
-            gridOptions = gridOptions, 
-            height = 600,
-            enable_enterprise_modules=True,
-            fit_columns_on_grid_load=False,
-            key = 35,   #- set a key to stop the grid reinitialising when the dataframe changes
-            reload_data=True,  
-            #   reload_data=False,  
-            data_return_mode='AS_INPUT',
-            #   data_return_mode='FILTERED',
-            update_mode='VALUE_CHANGED',   ## default
-            #   update_mode='MODEL_CHANGED',
-            allow_unsafe_jscode=True,
-            theme="light"  
-                # 'streamlit'
-                # "light" - balham-light
-                # "dark" - balham-dark
-                # "blue" - blue
-                # "fresh" - fresh
-                # "material" - material
-        )
-
-            # st.write(grid_response['data'].head(5))
-        try:    
-            diff = grid_response['data'].compare(grid_cost_data)
-        except:
-            diff = 0
-            # st.write(diff.head(5))
-        if len(diff) > 0:
-                changed_column = diff.columns[0][0]
-                columns = diff.columns.tolist()
-                # st.write("columns are =  ", columns)
-                # if changed_column == 'forecast_method':
-                #     st.session_state.grid_key = st.session_state.grid_key + 1
-                new_value = diff.iloc[0,0]
-                # st.write("new_value =  ", new_value)
-                # st.write("index1 = ", diff.index.tolist()[0])
-                # st.write("index2 = ", diff.index[0])
-                cost_item_changed = grid_cost_data[(grid_cost_data.index==diff.index[0])].cost_item.iloc[0]
-                # st.write("cost_item_changed =  ", cost_item_changed)
-                # st.write(f"new_value:  '{new_value}' in column: '{changed_column}' for item: '{cost_item_changed}'")
-                
-                if changed_column == 'item_end_date' or changed_column == 'item_start_date' or new_value == 'Timeline':
-                    df = st.session_state.reporting_month_forecast_data
-                    df.loc[df.cost_item == cost_item_changed, changed_column] = new_value
-                    st.session_state.reporting_month_forecast_data = df
-                    # st.button("press")
-                    st.experimental_rerun()
-                    # st.write(st.session_state.reporting_month_forecast_data)
-                # new_series = diff['forecast_method', 'self'].dropna()
-                # new_value_list = new_series.dropna().tolist()
-                # new_column = new_series.name[0]
-                # st.write("new_column: ", new_column)
-                # new_value = new_series[0]
-                # update_table(st.session_state.forecast_data_table_name, new_column, new_value, )
-            # else:
-            #     st.write("no changes detected")
-
+    
 
 if st.session_state.summary_clicked:
-    # summary_data = grid_cost_data['cost_item']
-    # st.write(summary_data)
     grid_summary_data = pd.DataFrame(all_months)
     grid_summary_data['cost']=all_cost_amounts
     grid_summary_data['revenue']=st.session_state.revenue_amounts
     grid_summary_data['cashflow']= grid_summary_data['revenue'] - grid_summary_data['cost']
-    # grid_summary_data
     cashflow_list = grid_summary_data['cashflow'].tolist()
     cum_sum=[]
     j=0
@@ -342,3 +227,4 @@ if st.session_state.summary_clicked:
         st.write("")
 
 
+st.session_state.new_session = False

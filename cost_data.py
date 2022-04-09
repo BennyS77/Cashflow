@@ -27,7 +27,8 @@ def get_company_and_job_names():
 
 
 @st.experimental_memo()
-def getJobCostByFiscalPeriod(creds):
+def getJobCostByFiscalPeriod():
+    creds = st.session_state.creds
     dataset = 'JobCostSummaryByFiscalPeriods' 
     URL = 'https://reporting.jonas-premier.com/OData/ODataService.svc/'+dataset+'/?$format=json'
     # URL = 'https://reporting.jonas-premier.com/OData/ODataService.svc/?$format=json'
@@ -227,18 +228,15 @@ def create_reporting_month_data(the_details):
 
 
 
-def after_selecting_company():
+def create_job_list():
     """
         Create a Job list based on the selected Company
     """
-    # st.session_state.company='G01'
-    # st.sidebar.write(st.session_state.company)
     st.session_state.job_list = st.session_state.companies_and_jobs['Job_Number'].where(st.session_state.companies_and_jobs['Company_Code']==st.session_state.company).tolist()
     st.session_state.job_list.append("")
 
-def after_selecting_job():
-    st.session_state.cost_data,st.session_state.date_range = get_cost_data_and_date_range()
-    
+
+
 def after_selecting_reporting_month():
     """ If table exists, and if reporting_month data exists, get required forecast data and forecast_end_date  """
     # drop_table()
@@ -279,13 +277,7 @@ def after_selecting_reporting_month():
         st.session_state.forecast_table_exists = False
     st.session_state.grid_key = st.session_state.grid_key + 1
 
-def login_form(credentials):
-    """
-        When credentials are submitted - retrieve Company and Job details.
-    """
-    st.session_state.login_confirmed = True
-    st.session_state.creds = credentials
-    st.session_state.companies_and_jobs, st.session_state.company_list = get_company_and_job_names()
+
 
 
 def user_input_variables():
@@ -345,3 +337,22 @@ def user_input_variables():
     #     st.sidebar.write("Log out.")
     
     return
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+def return_forecast_settings():
+    try:
+        st.session_state.all_forecast_settings = readDetailsFromDatabase()
+    except:
+        st.write("""  Forecast Settings table does NOT exist """)
