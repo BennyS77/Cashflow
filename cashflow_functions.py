@@ -2,6 +2,7 @@ import streamlit as st
 import requests
 from requests.auth import HTTPBasicAuth
 import pandas as pd
+import numpy as np
 from datetime import datetime
 from dateutil.relativedelta import relativedelta
 
@@ -135,7 +136,7 @@ def get_cost_estimate_data(job):
     return df_1
 
 
-def get_historical_cost_data(company, job):
+def get_all_cost_data(company, job):
     cost_data = fetch_Odata(
             dataset = 'JobCostSummaryByFiscalPeriods', 
             columns = "Company_Code,Job_Number,Fiscal_Period,Cost_Item,Actual_Dollars")
@@ -159,18 +160,20 @@ def get_date_range(historical_cost_data):
 
 
 def select_reporting_month(date_range):
-    st.sidebar.selectbox( label = "Reporting Month:",
-                options = date_range,
-                # index = (len(date_range)-1),
-                format_func=lambda x: x.strftime('%b %Y') if x!="" else x,
-                key= 'reporting_month')
-    return
+    # st.sidebar.selectbox( label = "Reporting Month:",
+    #             options = date_range,
+    #             # index = (len(date_range)-1),
+    #             format_func=lambda x: x.strftime('%b %Y') if x!="" else x,
+    #             key= 'reporting_month')
+    return datetime(2022,3,31)
+
 
 def select_forecast_end_date():
-    st.session_state.forecast_end_date = datetime(2022,11,11)
+    forecast_end_date = datetime(2022,11,11)
+    return forecast_end_date
 
 
-def create_cost_table_for_report_period(cost_estimate_data, cost_by_fiscal_period, date_range, reporting_month):
+def create_cost_data_for_reporting_month(cost_estimate_data, cost_by_fiscal_period, date_range, reporting_month):
     first_month = date_range[0]
     last_month = reporting_month
     d_end=[0]*len(pd.period_range(first_month, last_month, freq='M'))
@@ -181,10 +184,23 @@ def create_cost_table_for_report_period(cost_estimate_data, cost_by_fiscal_perio
     cost_by_fiscal_period.drop(['Actual_Dollars','Calendar_Period'], axis=1, inplace=True)
     cost_by_fiscal_period=cost_by_fiscal_period.groupby(['Cost_Item']).apply(lambda x: x.sum())
     cost_by_fiscal_period.drop(['Cost_Item'], axis=1, inplace=True)
-    cost_by_fiscal_period['ACTD'] = cost_by_fiscal_period.sum(axis=1)
+    # cost_by_fiscal_period['ACTD'] = cost_by_fiscal_period.sum(axis=1)
     cost_by_fiscal_period.reset_index(inplace=True)
     cost_by_fiscal_period = cost_by_fiscal_period.rename(columns = {'Cost_Item':'cost_item'})
+    
     merged_data = pd.merge(cost_by_fiscal_period, cost_estimate_data, on='cost_item', how='left')
+    merged_data['reporting_month'] = reporting_month
+    
+    cols = list(merged_data.columns.values)
+    col_list = [ cols[-1], cols[-4], cols[0], cols[-3], cols[-2] ]
+    col_list.extend(cols[1:-4])
+    merged_data = merged_data[ col_list ]
+
+    this_range = pd.period_range(first_month, last_month, freq='M')
+    for i, item in enumerate(this_range):
+        merged_data[item.strftime('%b_%y')+'_%']=merged_data.apply(lambda x: x[item.strftime('%b_%y')+'_$']/x.EAC if x.EAC>0 else 0, axis=1)
+        merged_data.drop([item.strftime('%b_%y')+'_$'], axis=1, inplace=True)
+        
     # this_range = pd.period_range(first_month, last_month, freq='M')
     # for i, item in enumerate(this_range):
     #     if i == 0:
@@ -196,25 +212,78 @@ def create_cost_table_for_report_period(cost_estimate_data, cost_by_fiscal_perio
     return merged_data
 
 
-
-def get_cost_forecast_settings():
-    if st.session_state.forecast_settings_exist:  
-        st.write(" Use existing forecast settings")
+def monthly_forecast_calcs(x,date_range, i):
+    global business_days_in_month
+    start_of_current_month = date_range[i].date()
+    if x['item_start_date'] <= start_of_current_month:
+        business_days_in_month = np.busday_count(date_range[i].date(), date_range[i].date() + relativedelta(months=1) , weekmask=[1,1,1,1,1,0,0])
+    if x['item_start_date'] > start_of_current_month and x['item_start_date'] < start_of_current_month + relativedelta(months=1):
+        # st.write("starts this month")
+        business_days_in_month = np.busday_count(x['item_start_date'], start_of_current_month + relativedelta(months=1) , weekmask=[1,1,1,1,1,0,0])
+        # st.write(business_days_in_month)
+    if x['item_start_date'] >= start_of_current_month + relativedelta(months=1):
+        business_days_in_month = 0
+    if x['days_left']>business_days_in_month:
+        work_days_in_month =  business_days_in_month 
     else:
-        df = pd.DataFrame(st.session_state.selected_monthly_cost_data['cost_item'])
-        df['reporting_month']=st.session_state.reporting_month.date()
-        df['forecast_end_date']=st.session_state.forecast_end_date
-        df['item_start_date']=df['reporting_month'].apply(lambda x: pd.Period(x,freq='M').start_time.date() + relativedelta(months=1))
-        df['item_end_date']=df['forecast_end_date']
-        df['forecast_method']="Timeline"
-        for i in range(1, len(pd.period_range(df['reporting_month'].iloc[0], df['forecast_end_date'].iloc[0], freq='M')),1):
-            month=pd.Period(df['reporting_month'].iloc[0] + relativedelta(months=i) , freq='M').start_time.date() 
-            # month=pd.Period(df['reporting_month'].iloc[0],freq='M').start_time.date() + relativedelta(months=i)
-            df[month.strftime('%b_%y')+'_F%']=0
-        # st.session_state.forecast_settings = df
-        # st.session_state.forecast_settings_exist = True
-    return
+        work_days_in_month = x['days_left']
+    return work_days_in_month
 
+
+def get_cost_forecast_settings(cost_estimate_data, reporting_month, forecast_end_date):
+    df = pd.DataFrame(cost_estimate_data['cost_item'])
+    df['reporting_month']=reporting_month.date()
+    df['item_start_date']=df['reporting_month'].apply(lambda x: pd.Period(x,freq='M').start_time.date() + relativedelta(months=1))
+    df['item_end_date']=forecast_end_date.date()
+    df['forecast_method']="Timeline"
+        ## FOR TESTING ##
+    df['item_start_date'].iloc[2]=reporting_month.date()+relativedelta(months=1)+relativedelta(days=15)
+    df['item_end_date'].iloc[2]=forecast_end_date.date()+relativedelta(months=-2)+relativedelta(days=-8)
+    df['forecast_method'].iloc[5]="Manual"
+    df['num_of_days_duration'] = df.apply(lambda x: np.busday_count(x.item_start_date, x.item_end_date, weekmask=[1,1,1,1,1,0,0]), axis = 1)
+    df['days_left'] = df['num_of_days_duration']
+
+    forecast_date_range = pd.period_range(reporting_month+relativedelta(months=1), forecast_end_date, freq='M').to_timestamp()
+    for i in range(len(forecast_date_range)):
+        df['work_days_in_month']=df.apply(lambda x: monthly_forecast_calcs(x, forecast_date_range, i), axis=1)
+        df['days_left'] = df['days_left'] - df['work_days_in_month']
+        df[forecast_date_range[i].strftime('%b_%y')+'_F%']=df.apply(lambda x: x['work_days_in_month']/x['num_of_days_duration'], axis=1)
+
+    df.drop(['num_of_days_duration', 'days_left', 'work_days_in_month'], axis=1,inplace=True)
+
+    cols = list(df.columns.values)
+    col_list = [ cols[0], cols[1], cols[2], cols[3], cols[4], cols[5] ]
+    col_list.extend(cols[6:])
+    df = df[ col_list ]
+    return df
+
+
+def create_cost_data_table(reporting_month_cost_data, cost_forecast_settings, start, reporting_month, forecast_end_date):
+    reporting_month_cost_data.drop(['reporting_month'], axis=1, inplace=True)
+    cost_data_table =  pd.merge(reporting_month_cost_data, cost_forecast_settings, on='cost_item', how='left')
+    # date_range = pd.period_range(start, reporting_month, freq='M').to_timestamp()
+    this_range = pd.period_range(start, reporting_month, freq='M')
+    for i, item in enumerate(this_range):
+        if i == 0:
+            cost_data_table[item.strftime('%b_%y')+'_c%']=cost_data_table.apply(lambda x: x[item.strftime('%b_%y')+'_%'], axis=1)
+        else:
+            cost_data_table[this_range[i].strftime('%b_%y')+'_c%'] = (
+                            cost_data_table.apply(lambda x: x[this_range[i].strftime('%b_%y')+'_%'] + x[this_range[i-1].strftime('%b_%y')+'_c%'], axis=1) 
+                            )
+        cost_data_table['total'] = cost_data_table[this_range[i].strftime('%b_%y')+'_c%'] 
+    
+    forecast_range = pd.period_range(reporting_month+relativedelta(months=1), forecast_end_date, freq='M')
+    for i, item in enumerate(forecast_range):
+        if i == 0:
+            cost_data_table[item.strftime('%b_%y')+'_cF%']=cost_data_table.apply(lambda x: x.total + (1-x.total)*x[item.strftime('%b_%y')+'_F%'], axis=1)
+        else:
+            cost_data_table[forecast_range[i].strftime('%b_%y')+'_cF%'] = (
+                            cost_data_table.apply(
+                                lambda x: x[forecast_range[i-1].strftime('%b_%y')+'_cF%'] + (1-x.total)*x[item.strftime('%b_%y')+'_F%'], axis=1) 
+                            )
+
+    
+    return cost_data_table
 
 
 def calculate_cost_data_for_the_grid():

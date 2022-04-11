@@ -34,8 +34,8 @@ def page_config_and_session_state():
         st.session_state.cost_estimate_data = None
     if 'estimation_data' not in st.session_state:
         st.session_state.estimation_data = False
-    if 'historical_cost_data' not in st.session_state:
-        st.session_state.historical_cost_data = None
+    if 'all_cost_data' not in st.session_state:
+        st.session_state.all_cost_data = None
     if 'historical_data' not in st.session_state:
         st.session_state.historical_data = False
     if 'date_range' not in st.session_state:
@@ -46,24 +46,19 @@ def page_config_and_session_state():
         st.session_state.reporting_month = ""
     if 'report_period_data' not in st.session_state:
         st.session_state.report_period_data = False
-    if 'report_period_cost_data' not in st.session_state:
-        st.session_state.report_period_cost_data = None
+    if 'reporting_month_cost_data' not in st.session_state:
+        st.session_state.reporting_month_cost_data = None
+    if 'cost_forecast_settings' not in st.session_state:
+        st.session_state.cost_forecast_settings = None
+    if 'forecast_end_date' not in st.session_state:
+        st.session_state.forecast_end_date = None
+    if 'cost_data_table' not in st.session_state:
+        st.session_state.cost_data_table = None
 
     # if 'new_session' not in st.session_state:
     #     st.session_state.new_session = True
-
-
-
     # if 'login_confirmed' not in st.session_state:
     #     st.session_state.login_confirmed = False
-
-    #     # st.session_state.job = "PD140479"
-    # if 'all_cost_data' not in st.session_state:
-    #     st.session_state.all_cost_data = None
-    # if 'cost_data_retrieved' not in st.session_state:
-    #     st.session_state.cost_data_retrieved = False
-    # if 'reporting_month' not in st.session_state:
-    #     st.session_state.reporting_month = ""
 
     # # if 'creds' not in st.session_state:
     # #     st.session_state.creds = {}
@@ -76,13 +71,6 @@ def page_config_and_session_state():
     # if 'forecast_settings_exist' not in st.session_state:
     #     st.session_state.forecast_settings_exist = None
     
-
-    
-    
-    # if 'companies_and_jobs' not in st.session_state:
-    #     st.session_state.companies_and_jobs = []
-    # if 'table_1' not in st.session_state:
-    #     st.session_state.table_1 = []
     # if 'forecast_data_table_name' not in st.session_state:
     #     st.session_state.forecast_data_table_name = ''
   
@@ -96,12 +84,6 @@ def page_config_and_session_state():
  
     # if 'revenue_amounts' not in st.session_state:
     #     st.session_state.revenue_amounts = []
-    # if 'cost_clicked' not in st.session_state:
-    #     st.session_state.cost_clicked = True
-    # if 'revenue_clicked' not in st.session_state:
-    #     st.session_state.revenue_clicked = False
-    # if 'summary_clicked' not in st.session_state:
-    #     st.session_state.summary_clicked = False
     # if 'engine' not in st.session_state:
     #     st.session_state.engine = create_engine("postgresql+psycopg2://postgres:NoticePSQL22@127.0.0.1:5432/premier-reports-database", echo=True)
     return
