@@ -5,6 +5,8 @@ import pandas as pd
 import numpy as np
 from datetime import datetime
 from dateutil.relativedelta import relativedelta
+from st_aggrid import AgGrid
+from aggrid_functions_cost import config_actual_cost_children, config_forecast_cost_children, configure_cost_grid_options
 
 
 def page_layout():
@@ -198,7 +200,8 @@ def create_cost_data_for_reporting_month(cost_estimate_data, cost_by_fiscal_peri
 
     this_range = pd.period_range(first_month, last_month, freq='M')
     for i, item in enumerate(this_range):
-        merged_data[item.strftime('%b_%y')+'_%']=merged_data.apply(lambda x: x[item.strftime('%b_%y')+'_$']/x.EAC if x.EAC>0 else 0, axis=1)
+        # merged_data[item.strftime('%b_%y')+'_%']=merged_data.apply(lambda x: x[item.strftime('%b_%y')+'_$']/x.EAC if x.EAC>0 else 0, axis=1)
+        merged_data[item.strftime('%Y-%m')]=merged_data.apply(lambda x: x[item.strftime('%b_%y')+'_$']/x.EAC if x.EAC>0 else 0, axis=1)
         merged_data.drop([item.strftime('%b_%y')+'_$'], axis=1, inplace=True)
         
     # this_range = pd.period_range(first_month, last_month, freq='M')
@@ -231,26 +234,44 @@ def monthly_forecast_calcs(x,date_range, i):
 
 
 def get_cost_forecast_settings(cost_estimate_data, reporting_month, forecast_end_date):
+    """
+        EITHER GET SETTINGS FROM DATABASE TABLE OR CREATE NEW DEFAULT SETTINGS
+    """
     df = pd.DataFrame(cost_estimate_data['cost_item'])
     df['reporting_month']=reporting_month.date()
     df['item_start_date']=df['reporting_month'].apply(lambda x: pd.Period(x,freq='M').start_time.date() + relativedelta(months=1))
     df['item_end_date']=forecast_end_date.date()
     df['forecast_method']="Timeline"
-        ## FOR TESTING ##
-    df['item_start_date'].iloc[2]=reporting_month.date()+relativedelta(months=1)+relativedelta(days=15)
-    df['item_end_date'].iloc[2]=forecast_end_date.date()+relativedelta(months=-2)+relativedelta(days=-8)
-    df['forecast_method'].iloc[5]="Manual"
+
     df['num_of_days_duration'] = df.apply(lambda x: np.busday_count(x.item_start_date, x.item_end_date, weekmask=[1,1,1,1,1,0,0]), axis = 1)
     df['days_left'] = df['num_of_days_duration']
+    forecast_date_range = pd.period_range(reporting_month+relativedelta(months=1), forecast_end_date, freq='M').to_timestamp()
+    for i in range(len(forecast_date_range)):
+        col_month = forecast_date_range[i].strftime('%Y-%m')
+        df['work_days_in_month']=df.apply(lambda x: monthly_forecast_calcs(x, forecast_date_range, i), axis=1)
+        df['days_left'] = df['days_left'] - df['work_days_in_month']
+        # df[col_month+'_BDIM']=df.apply(lambda x: np.busday_count(forecast_date_range[i].date(), forecast_date_range[i].date() + relativedelta(months=1) , weekmask=[1,1,1,1,1,0,0]), axis=1)
 
+        df[col_month+'-F']=df.apply(lambda x: x['work_days_in_month']/x['num_of_days_duration'], axis=1)
+    # df.drop(['num_of_days_duration', 'days_left', 'work_days_in_month'], axis=1,inplace=True)
+    # cols = list(df.columns.values)
+    # col_list = [ cols[0], cols[1], cols[2], cols[3], cols[4], cols[5] ]
+    # col_list.extend(cols[6:])
+    # df = df[ col_list ]
+    # st.write('df')
+    # st.write(df.head(5))
+    return df
+
+
+def recalculate_cost_forecast_settings(df, reporting_month, forecast_end_date):
+    df['num_of_days_duration'] = df.apply(lambda x: np.busday_count(x.item_start_date, x.item_end_date, weekmask=[1,1,1,1,1,0,0]), axis = 1)
+    df['days_left'] = df['num_of_days_duration']
     forecast_date_range = pd.period_range(reporting_month+relativedelta(months=1), forecast_end_date, freq='M').to_timestamp()
     for i in range(len(forecast_date_range)):
         df['work_days_in_month']=df.apply(lambda x: monthly_forecast_calcs(x, forecast_date_range, i), axis=1)
         df['days_left'] = df['days_left'] - df['work_days_in_month']
         df[forecast_date_range[i].strftime('%b_%y')+'_F%']=df.apply(lambda x: x['work_days_in_month']/x['num_of_days_duration'], axis=1)
-
     df.drop(['num_of_days_duration', 'days_left', 'work_days_in_month'], axis=1,inplace=True)
-
     cols = list(df.columns.values)
     col_list = [ cols[0], cols[1], cols[2], cols[3], cols[4], cols[5] ]
     col_list.extend(cols[6:])
@@ -259,52 +280,68 @@ def get_cost_forecast_settings(cost_estimate_data, reporting_month, forecast_end
 
 
 def create_cost_data_table(reporting_month_cost_data, cost_forecast_settings, start, reporting_month, forecast_end_date):
+    """  Merge ACTUAL with FORECAST, calculate cumulative percentages"""
     reporting_month_cost_data.drop(['reporting_month'], axis=1, inplace=True)
     cost_data_table =  pd.merge(reporting_month_cost_data, cost_forecast_settings, on='cost_item', how='left')
-    # date_range = pd.period_range(start, reporting_month, freq='M').to_timestamp()
+    ### Cumulative 'actual' percentages
     this_range = pd.period_range(start, reporting_month, freq='M')
     for i, item in enumerate(this_range):
         if i == 0:
-            cost_data_table[item.strftime('%b_%y')+'_c%']=cost_data_table.apply(lambda x: x[item.strftime('%b_%y')+'_%'], axis=1)
+            cost_data_table[item.strftime('%Y-%m')+'-c']=cost_data_table.apply(lambda x: x[item.strftime('%Y-%m')], axis=1)
         else:
-            cost_data_table[this_range[i].strftime('%b_%y')+'_c%'] = (
-                            cost_data_table.apply(lambda x: x[this_range[i].strftime('%b_%y')+'_%'] + x[this_range[i-1].strftime('%b_%y')+'_c%'], axis=1) 
+            cost_data_table[this_range[i].strftime('%Y-%m')+'-c'] = (
+                            cost_data_table.apply(lambda x: x[this_range[i].strftime('%Y-%m')] + x[this_range[i-1].strftime('%Y-%m')+'-c'], axis=1) 
                             )
-        cost_data_table['total'] = cost_data_table[this_range[i].strftime('%b_%y')+'_c%'] 
+        cost_data_table['total'] = cost_data_table[this_range[i].strftime('%Y-%m')+'-c'] 
     
+    ### Cumulative forecast percentages
     forecast_range = pd.period_range(reporting_month+relativedelta(months=1), forecast_end_date, freq='M')
     for i, item in enumerate(forecast_range):
         if i == 0:
-            cost_data_table[item.strftime('%b_%y')+'_cF%']=cost_data_table.apply(lambda x: x.total + (1-x.total)*x[item.strftime('%b_%y')+'_F%'], axis=1)
+            cost_data_table[item.strftime('%Y-%m')+'-cF']=cost_data_table.apply(lambda x: x.total + (1-x.total)*x[item.strftime('%Y-%m')+'-F'], axis=1)
         else:
-            cost_data_table[forecast_range[i].strftime('%b_%y')+'_cF%'] = (
+            cost_data_table[forecast_range[i].strftime('%Y-%m')+'-cF'] = (
                             cost_data_table.apply(
-                                lambda x: x[forecast_range[i-1].strftime('%b_%y')+'_cF%'] + (1-x.total)*x[item.strftime('%b_%y')+'_F%'], axis=1) 
+                                lambda x: x[forecast_range[i-1].strftime('%Y-%m')+'-cF'] + (1-x.total)*x[item.strftime('%Y-%m')+'-F'], axis=1) 
                             )
-
-    
+    cost_data_table['reporting_month']=cost_data_table.apply(lambda x: x['reporting_month'].strftime("%b %Y"), axis=1)
+    # cost_data_table['item_start_date']=cost_data_table.apply(lambda x: x['item_start_date'].strftime("%d/%m/%Y"), axis=1)
+    # cost_data_table['item_end_date']=cost_data_table.apply(lambda x: x['item_end_date'].strftime("%d/%m/%Y"), axis=1)
+    # cols = list(cost_data_table.columns.values)
+    # col_list = [ cols[-4], cols[0], cols[1], cols[2], cols[3], cols[-1], cols[-3], cols[-2] ]
+    # col_list.extend(cols[4:-4])
+    # cost_data_table = cost_data_table[ col_list ]
     return cost_data_table
 
 
-def calculate_cost_data_for_the_grid():
-    eac_data = get_cost_estimation_data()
-    # monthly_cost_with_ACTD = calc_cost_per_month_and_ACTD()
-    cost_by_fiscal_period = st.session_state.all_cost_data
-    first_month = st.session_state.date_range[0]
-    last_month = st.session_state.reporting_month
-    d_end=[0]*len(pd.period_range(first_month, last_month, freq='M'))
-    for i in range(len(pd.period_range(first_month, last_month, freq='M'))):
-            d_start=pd.Period(first_month+relativedelta(months=i), freq='M').start_time.date()
-            d_end[i]=pd.Period(first_month+relativedelta(months=i), freq='M').end_time.date() 
-            cost_by_fiscal_period[d_end[i].strftime('%b_%y')+'_$'] = cost_by_fiscal_period.apply(lambda x: x.Actual_Dollars if x.Calendar_Period>=d_start and x.Calendar_Period<=d_end[i] else 0, axis=1)
-    cost_by_fiscal_period.drop(['Actual_Dollars','Calendar_Period'], axis=1, inplace=True)
-    cost_by_fiscal_period=cost_by_fiscal_period.groupby(['Cost_Item']).apply(lambda x: x.sum())
-    cost_by_fiscal_period.drop(['Cost_Item'], axis=1, inplace=True)
-    cost_by_fiscal_period['ACTD'] = cost_by_fiscal_period.sum(axis=1)
-    cost_by_fiscal_period.reset_index(inplace=True)
-    cost_by_fiscal_period = cost_by_fiscal_period.rename(columns = {'Cost_Item':'cost_item'})
-    cost_data = merge_eac_and_calc_percent(cost_by_fiscal_period, eac_data)
-    return cost_data
+def display_cost_in_grid(cost_data_table, start_date, reporting_month, forecast_end_date):
+    actual_children = config_actual_cost_children(start_date, reporting_month)
+    forecast_children = config_forecast_cost_children(reporting_month+relativedelta(months=1), forecast_end_date)
+    grid_options = configure_cost_grid_options(actual_children, forecast_children)
+
+    # st.write('cost_data_table - before')
+    # st.write(cost_data_table)
+    # st.write(cost_data_table.iloc[:5,13:])
+
+    grid_response = AgGrid(
+                dataframe = cost_data_table,
+                gridOptions = grid_options, 
+                height = 350,
+                enable_enterprise_modules=True,
+                fit_columns_on_grid_load=True,
+                key = st.session_state.grid_key,   #- set a key to stop the grid reinitialising when the dataframe changes
+                # reload_data=True,  
+                reload_data=False,  
+                data_return_mode='AS_INPUT',
+                #   data_return_mode='FILTERED',
+                # update_mode='VALUE_CHANGED',   ## default
+                update_mode='MODEL_CHANGED',
+                # update_mode='MANUAL',
+                allow_unsafe_jscode=True,
+                theme="light"
+    )
+    
+    return grid_response
 
 
 
@@ -314,8 +351,3 @@ def get_company():
 def get_job():
     return "PD140479"
 
-# if testing:
-#     st.session_state.company="G01"
-#     st.session_state.company_list=["G01",""]
-#     st.session_state.job="PD140479"
-#     st.session_state.job_list=["PD140479",""]

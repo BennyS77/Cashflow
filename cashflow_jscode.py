@@ -85,12 +85,14 @@ js_changed = JsCode("""function(e) {
     console.log('node: ', e.node);
     console.log('new value: ', e.newValue);
     console.log('column: ', e.column.colId);
+/*    
     if (e.column.colId == "forecast_method") {
       api.refreshCells({
         force: true,
         rowNodes: [e.node],
         });
     }
+*/
     };
 """)
 
@@ -103,10 +105,10 @@ js_clicked = JsCode("""function(e) {
     console.log('node: ', e.node);
     console.log('id: ', e.node.id);
     console.log('key: ', e.node.key);
-    console.log('new value: ', e.newValue);
     console.log('group: ', e.node.group);
     console.log('footer: ', e.node.footer);
-    console.log('col_clicked: ', e.column.colId);
+    console.log('col_id: ', e.column.colId);
+    console.log('col_field: ', e.colDef.field);
     };
 """)
 
@@ -164,15 +166,275 @@ percent_formatter = JsCode("""
   function(params) {
     let col_group = params.colDef.field.substr(0,7);
     let new_col = col_group.concat("$");
-    if (params.node.group == true && params.node.footer == true) {
-        return parseFloat(params.node.aggData[new_col]/params.node.aggData.EAC*100).toFixed(1);
+    if (params.value > 0) {
+      if (params.node.group == true && params.node.footer == true) {
+          return parseFloat(params.node.aggData[new_col]/params.node.aggData.EAC*100).toFixed(1);
+      }
+      if (params.node.group != true) {
+        return parseFloat(params.value*100).toFixed(1);
+      }
+      if (params.node.leafGroup == true && params.node.expanded == false ) {
+          return parseFloat(params.node.aggData[new_col]/params.node.aggData.EAC*100).toFixed(1);
+      }
+    } else {
+      return ''
     }
-    if (params.node.group != true) {
-       return parseFloat(params.value*100).toFixed(1);
+  };
+  """)
+
+## Calculate actual cumulative percentages
+actual_cum_perc_getter = JsCode("""
+  function(params) {
+    var this_date = new Date(params.column.colId);
+    var this_year = String(this_date.getFullYear());
+    var this_month = String(this_date.getMonth()+1).padStart(2, '0');
+    var this_column_string = this_year.concat("-").concat(this_month).concat("-1");
+
+    var last_date = new Date(params.column.colId);
+    last_date.setMonth(last_date.getMonth() - 1);
+    var last_year = String(last_date.getFullYear());
+    var last_month = String(last_date.getMonth()+1).padStart(2, '0');
+    var last_column_string = last_year.concat("-").concat(last_month).concat("-1");
+
+    var this_month_percent = params.data[this_year.concat("-").concat(this_month)];
+    var last_month_total = params.data[last_column_string];
+
+    console.log("Start: ");
+    console.log("this_date = ", this_date);
+    console.log("this_column_string = ", this_column_string);
+    console.log("last_column_string = ", last_column_string);
+    console.log("last_month_total = ", last_month_total);
+
+
+    if (last_month_total > 0) {
+      var value = this_month_percent + last_month_total;
+    } else {
+      var value = this_month_percent;
     }
-    if (params.node.leafGroup == true && params.node.expanded == false ) {
-        return parseFloat(params.node.aggData[new_col]/params.node.aggData.EAC*100).toFixed(1);
+    if (value > 0) {
+      return parseFloat(value*100).toFixed(1);
+      } else {
+        return ''
+      }
+
+};
+""")
+
+
+
+value_getter = JsCode("""
+  function(params) {
+      var this_month_id = params.column.colId.substring(0,7);
+      let col = this_month_id.concat("-c");
+      if (params.data[col] > 0) {
+        return parseFloat(params.data[col]*params.data.EAC).toLocaleString('en',{minimumFractionDigits: 0,  maximumFractionDigits: 0})
+      } else {
+        return ''
+      }
+  };
+  """)
+
+
+## Calculate monthly forecast amounts ##
+forecast_amount_getter = JsCode("""
+  function(params) {
+    var this_column = params.column.colId;
+    var this_year = params.column.colId.substr(0,4);
+    var this_month = params.column.colId.substr(5,2);
+    var start_of_month = new Date(this_year, this_month-1, 1);
+    var end_of_month = new Date(this_year, this_month, 0);
+    var item_start = new Date(params.data.item_start_date);
+    var item_start_date = new Date(item_start.getFullYear(), item_start.getMonth(), item_start.getDate());
+    var item_end = new Date(params.data.item_end_date);
+    var item_end_date = new Date(item_end.getFullYear(), item_end.getMonth(), item_end.getDate());  
+
+/*    console.log("this_column = ", this_column);
+    console.log("this_year = ", this_year);
+    console.log("this_month = ", this_month);
+    console.log("start_of_month = ", start_of_month);
+    console.log("end_of_month = ", end_of_month);
+    console.log("item_start_date = ", item_start_date);
+    console.log("item_end_date = ", item_end_date);
+*/
+
+    let total_days = getBusinessDatesCount(item_start_date, item_end_date);   
+
+    if (item_start_date < start_of_month && item_end_date > end_of_month) {
+      var num_of_days = getBusinessDatesCount(start_of_month, end_of_month);
     }
+
+    if (item_start_date >= start_of_month && item_start_date <= end_of_month && item_end_date > end_of_month) {
+      var num_of_days = getBusinessDatesCount(item_start_date, end_of_month);
+    }
+
+    if (item_start_date >= start_of_month && item_end_date <= end_of_month) {
+      var num_of_days = getBusinessDatesCount(item_start_date, item_end_date);
+    }
+
+    if (item_start_date < start_of_month && item_end_date >= start_of_month && item_end_date <= end_of_month) {
+      var num_of_days = getBusinessDatesCount(start_of_month, item_end_date);
+    }
+    if (item_start_date > end_of_month || item_end_date < start_of_month) {
+      var num_of_days = 0
+    }  
+
+    if (num_of_days > 0 ) {
+      var ETC_amount = (1-params.data.total)*params.data.EAC;
+      return parseFloat(num_of_days/total_days*ETC_amount).toLocaleString('en',{minimumFractionDigits: 0,  maximumFractionDigits: 0});
+    } else {
+      return ''
+    }
+
+    function getBusinessDatesCount(startDate, endDate) {
+        let count = 0;
+        const curDate = new Date(startDate.getTime());
+        while (curDate <= endDate) {
+            const dayOfWeek = curDate.getDay();
+            if(dayOfWeek !== 0 && dayOfWeek !== 6) count++;
+            curDate.setDate(curDate.getDate() + 1);
+        }
+        return count;
+    }
+
+  };
+  """)
+
+## Calculate the cumulative forecast percentages.
+forecast_cum_perc_getter = JsCode("""
+  function(params) {
+   if (params.data.forecast_method == "Timeline") {
+    var this_column = params.column.colId;
+    var this_year = params.column.colId.substr(0,4);
+    var this_month = params.column.colId.substr(5,2);
+    var start_of_month = new Date(this_year, this_month-1, 1);
+    var end_of_month = new Date(this_year, this_month, 0);
+
+    
+    var item_start = new Date(params.data.item_start_date);
+    console.log(item_start);
+    var item_start_date = new Date(item_start.getFullYear(), item_start.getMonth(), item_start.getDate());
+    var item_end = new Date(params.data.item_end_date);
+    var item_end_date = new Date(item_end.getFullYear(), item_end.getMonth(), item_end.getDate());  
+
+    let total_days = getBusinessDatesCount(item_start_date, item_end_date);   
+
+    if (item_start_date > end_of_month) {
+      var duration_so_far = 0;
+    }
+
+    if (item_start_date >= start_of_month && item_start_date <= end_of_month && item_end_date > end_of_month) {
+      var duration_so_far = getBusinessDatesCount(item_start_date, end_of_month);
+    }
+
+    if (item_start_date < start_of_month && item_end_date > end_of_month) {
+      var duration_so_far = getBusinessDatesCount(item_start_date, end_of_month);
+    }
+
+    if (item_start_date < start_of_month && item_end_date >= start_of_month && item_end_date <= end_of_month) {
+      var duration_so_far = getBusinessDatesCount(item_start_date, item_end_date);
+    }
+
+    if (item_start_date < start_of_month && item_end_date >= start_of_month && item_end_date <= end_of_month) {
+      var duration_so_far = getBusinessDatesCount(item_start_date, item_end_date);
+    }
+
+    if (duration_so_far > 0) {
+      var ETC = 1-params.data.total;
+      return parseFloat((params.data.total+(duration_so_far/total_days)*ETC)*100).toFixed(1);
+    } else {
+      return ''
+    }
+
+  }
+
+    function getBusinessDatesCount(startDate, endDate) {
+        let count = 0;
+        const curDate = new Date(startDate.getTime());
+        while (curDate <= endDate) {
+            const dayOfWeek = curDate.getDay();
+            if(dayOfWeek !== 0 && dayOfWeek !== 6) count++;
+            curDate.setDate(curDate.getDate() + 1);
+        }
+        return count;
+    }
+   
+};
+""")
+
+
+## Calculate the monthly forecast percentages (ie not cumulative)
+forecast_percentage_getter= JsCode("""
+function(params) {
+    var this_column = params.column.colId;
+    var this_year = params.column.colId.substr(0,4);
+    var this_month = params.column.colId.substr(5,2);
+    var start_of_month = new Date(this_year, this_month-1, 1);
+    var end_of_month = new Date(this_year, this_month, 0);
+    var item_start = new Date(params.data.item_start_date);
+    var item_start_date = new Date(item_start.getFullYear(), item_start.getMonth(), item_start.getDate());
+    var item_end = new Date(params.data.item_end_date);
+    var item_end_date = new Date(item_end.getFullYear(), item_end.getMonth(), item_end.getDate());  
+/*
+    console.log("this_column = ", this_column);
+    console.log("this_year = ", this_year);
+    console.log("this_month = ", this_month);
+    console.log("start_of_month = ", start_of_month);
+    console.log("end_of_month = ", end_of_month);
+    console.log("item_start_date = ", item_start_date);
+    console.log("item_end_date = ", item_end_date);
+*/
+
+    let total_days = getBusinessDatesCount(item_start_date, item_end_date);   
+
+         /** item starts before month and ends after month **/
+    if (item_start_date < start_of_month && item_end_date > end_of_month) {
+      var num_of_days = getBusinessDatesCount(start_of_month, end_of_month);
+      return parseFloat(num_of_days/total_days*100).toFixed(1);
+    }
+
+        /** item starts in month and ends after month  **/
+    if (item_start_date >= start_of_month && item_start_date <= end_of_month && item_end_date > end_of_month) {
+      var num_of_days = getBusinessDatesCount(item_start_date, end_of_month);
+      return parseFloat(num_of_days/total_days*100).toFixed(2);
+    }
+
+        /** item starts and finishes in same month **/
+    if (item_start_date >= start_of_month && item_end_date <= end_of_month) {
+      var num_of_days = getBusinessDatesCount(item_start_date, item_end_date);
+      return parseFloat(num_of_days/total_days*100).toFixed(1);
+    }
+
+        /** item starts before month and ends in month  **/
+    if (item_start_date < start_of_month && item_end_date >= start_of_month && item_end_date <= end_of_month) {
+      var num_of_days = getBusinessDatesCount(start_of_month, item_end_date);
+      return parseFloat(num_of_days/total_days*100).toFixed(1);
+    }
+        /** either item hasnt started yet or has already ended. **/
+    if (item_start_date > end_of_month || item_end_date < start_of_month) {
+      return 0
+    }  
+
+    function getBusinessDatesCount(startDate, endDate) {
+        let count = 0;
+        const curDate = new Date(startDate.getTime());
+        while (curDate <= endDate) {
+            const dayOfWeek = curDate.getDay();
+            if(dayOfWeek !== 0 && dayOfWeek !== 6) count++;
+            curDate.setDate(curDate.getDate() + 1);
+        }
+        return count;
+    }
+
+    return ''
+};
+""")
+
+
+cumulative_value_getter= JsCode("""
+  function(params) {
+    var previous_month = params.column.colId;
+    return previous_month
+
   };
   """)
 
@@ -198,6 +460,136 @@ amount_formatter = JsCode("""
   """)
 
 
+simple_getter = JsCode("""
+  function(params) {
+
+    var this_date = new Date(params.column.colId);
+    var this_year = String(this_date.getFullYear());
+    var this_month = String(this_date.getMonth()+1).padStart(2, '0');
+    var this_column_string = this_year.concat("-").concat(this_month);
+    var cum_percentage = params.data[this_column_string.concat("-cF")];
+
+    var last_date = new Date(params.column.colId);
+    last_date.setMonth(last_date.getMonth() - 1);
+    var last_year = String(last_date.getFullYear());
+    var last_month = String(last_date.getMonth()+1).padStart(2, '0');
+    var last_column_string = last_year.concat("-").concat(last_month);
+    var previous_cum_percentage = params.data[last_column_string.concat("-cF")];
+
+    if (isNaN(previous_cum_percentage)==false) {
+      return parseFloat((cum_percentage - previous_cum_percentage)*100).toFixed(1);
+      } else {
+        return parseFloat((cum_percentage-params.data.total)*100).toFixed(1);
+      }
+
+  };
+  """)
+
+another_formatter = JsCode("""
+  function(params) {
+    if (params.data.forecast_method == "Timeline") {
+      var this_column = params.column.colId;
+      var this_year = params.column.colId.substr(0,4);
+      var this_month = params.column.colId.substr(5,2);
+      var start_of_month = new Date(this_year, this_month-1, 1);
+      var end_of_month = new Date(this_year, this_month, 0);
+      var item_start = new Date(params.data.item_start_date);
+      var item_start_date = new Date(item_start.getFullYear(), item_start.getMonth(), item_start.getDate());
+      var item_end = new Date(params.data.item_end_date);
+      var item_end_date = new Date(item_end.getFullYear(), item_end.getMonth(), item_end.getDate());  
+
+      let total_days = getBusinessDatesCount(item_start_date, item_end_date);   
+
+      if (item_start_date > end_of_month) {
+        var duration_so_far = 0;
+      }
+
+      if (item_start_date >= start_of_month && item_start_date <= end_of_month && item_end_date > end_of_month) {
+        var duration_so_far = getBusinessDatesCount(item_start_date, end_of_month);
+      }
+
+      if (item_start_date < start_of_month && item_end_date > end_of_month) {
+        var duration_so_far = getBusinessDatesCount(item_start_date, end_of_month);
+      }
+
+      if (item_start_date < start_of_month && item_end_date >= start_of_month && item_end_date <= end_of_month) {
+        var duration_so_far = getBusinessDatesCount(item_start_date, item_end_date);
+      }
+
+      if (item_start_date < start_of_month && item_end_date >= start_of_month && item_end_date <= end_of_month) {
+        var duration_so_far = getBusinessDatesCount(item_start_date, item_end_date);
+      }
+
+      if (duration_so_far > 0) {
+        var ETC = 1-params.data.total;
+        return parseFloat((params.data.total+(duration_so_far/total_days)*ETC)*100).toFixed(1);
+      } else {
+        return ''
+      }
+    } else {
+      return parseFloat(params.value).toFixed(3);
+    
+    }
+
+    function getBusinessDatesCount(startDate, endDate) {
+        let count = 0;
+        const curDate = new Date(startDate.getTime());
+        while (curDate <= endDate) {
+            const dayOfWeek = curDate.getDay();
+            if(dayOfWeek !== 0 && dayOfWeek !== 6) count++;
+            curDate.setDate(curDate.getDate() + 1);
+        }
+        return count;
+    }
+    
+   
+  };
+  """)
+
+
+
+
+simple_forecast_amount_getter = JsCode("""
+  function(params) {
+
+    var this_date = new Date(params.column.colId);
+    var this_year = String(this_date.getFullYear());
+    var this_month = String(this_date.getMonth()+1).padStart(2, '0');
+    var this_column_string = this_year.concat("-").concat(this_month);
+    var cum_percentage = params.data[this_column_string.concat("-cF")];
+
+    var last_date = new Date(params.column.colId);
+    last_date.setMonth(last_date.getMonth() - 1);
+    var last_year = String(last_date.getFullYear());
+    var last_month = String(last_date.getMonth()+1).padStart(2, '0');
+    var last_column_string = last_year.concat("-").concat(last_month);
+    var previous_cum_percentage = params.data[last_column_string.concat("-cF")];
+
+    if (isNaN(previous_cum_percentage)==false) {
+      var amount = (cum_percentage - previous_cum_percentage)*params.data.EAC;
+      return parseFloat(amount).toLocaleString('en',{minimumFractionDigits: 0,  maximumFractionDigits: 0})
+      } else {
+      var amount = (cum_percentage)*params.data.EAC;
+      return parseFloat(amount).toLocaleString('en',{minimumFractionDigits: 0,  maximumFractionDigits: 0})
+      }
+
+    return parseFloat((cum_percentage - previous_cum_percentage)*params.data.EAC).toFixed(1);
+  };
+  """)
+
+simple_setter = JsCode("""
+  function(params) {
+    if (params.data.forecast_method == "Manual") {
+      var cum_percentage = params.newValue;
+      var cum_amount = cum_percentage * params.data.EAC;
+      params.data["2022-04-cF"] = newValue;
+      params.data["2022-04$"] = cum_amount;
+      params.data["2022-05$"] = cum_amount;
+      return true;
+    }
+
+  };
+  """)
 
 
 forecast_percent_formatter = JsCode("""

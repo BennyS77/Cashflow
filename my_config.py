@@ -14,7 +14,7 @@ def page_config_and_session_state():
       page_title="Premier Reports - Cost Forecast",
       page_icon="bar-chart",
       layout="wide",
-      initial_sidebar_state="expanded"  #expanded" #"collapsed" #auto
+      initial_sidebar_state="collapsed"  #expanded" #"collapsed" #auto
     )
     if 'cost_clicked' not in st.session_state:
         st.session_state.cost_clicked = True
@@ -32,28 +32,34 @@ def page_config_and_session_state():
         st.session_state.job_defined = False
     if 'cost_estimate_data' not in st.session_state:
         st.session_state.cost_estimate_data = None
-    if 'estimation_data' not in st.session_state:
-        st.session_state.estimation_data = False
+    if 'estimation_data_defined' not in st.session_state:
+        st.session_state.estimation_data_defined = False
     if 'all_cost_data' not in st.session_state:
         st.session_state.all_cost_data = None
-    if 'historical_data' not in st.session_state:
-        st.session_state.historical_data = False
+    if 'historical_data_defined' not in st.session_state:
+        st.session_state.historical_data_defined = False
     if 'date_range' not in st.session_state:
         st.session_state.date_range = None
     if 'period_selected' not in st.session_state:
         st.session_state.period_selected = False
     if 'reporting_month' not in st.session_state:
         st.session_state.reporting_month = ""
-    if 'report_period_data' not in st.session_state:
-        st.session_state.report_period_data = False
+    if 'reporting_month_data_defined' not in st.session_state:
+        st.session_state.reporting_month_data_defined = False
     if 'reporting_month_cost_data' not in st.session_state:
         st.session_state.reporting_month_cost_data = None
     if 'cost_forecast_settings' not in st.session_state:
         st.session_state.cost_forecast_settings = None
+    if 'cost_forecast_settings_defined' not in st.session_state:
+        st.session_state.cost_forecast_settings_defined = False
     if 'forecast_end_date' not in st.session_state:
         st.session_state.forecast_end_date = None
     if 'cost_data_table' not in st.session_state:
         st.session_state.cost_data_table = None
+    if 'ready_for_grid' not in st.session_state:
+        st.session_state.ready_for_grid = False
+    if 'grid_key' not in st.session_state:
+        st.session_state.grid_key = 0
 
     # if 'new_session' not in st.session_state:
     #     st.session_state.new_session = True
@@ -75,10 +81,8 @@ def page_config_and_session_state():
     #     st.session_state.forecast_data_table_name = ''
   
     
-    # if 'grid_key' not in st.session_state:
-    #     st.session_state.grid_key = 0
-    # if 'ready_for_grid' not in st.session_state:
-    #     st.session_state.ready_for_grid = False
+ 
+
     # # if 'for_testing' not in st.session_state:
     # #     st.session_state.for_testing = False
  
