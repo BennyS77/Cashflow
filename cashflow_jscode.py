@@ -85,28 +85,31 @@ js_changed = JsCode("""function(e) {
     console.log('node: ', e.node);
     console.log('new value: ', e.newValue);
     console.log('column: ', e.column.colId);
-/*    
-    if (e.column.colId == "forecast_method") {
-      api.refreshCells({
-        force: true,
-        rowNodes: [e.node],
-        });
+
+    let rowNode = api.getRowNode(rowIndex);
+    
+    if (e.column.colId == "item_start_date") {
+      rowNode.setDataValue("EAC", 77);
     }
-*/
     };
 """)
 
 js_clicked = JsCode("""function(e) {
-    let api = e.api;
-    let rowIndex = e.rowIndex;
     console.log('cell clicked....!!!!!!');
-    console.log('api: ', api);
-    console.log('rowIndex: ', rowIndex);
+
+    console.log('column: ', e.column);
+    console.log('colDef: ', e.colDef);
+    console.log('value: ', e.value);
     console.log('node: ', e.node);
+    console.log('data: ', e.data);
+    console.log('rowIndex: ', e.rowIndex);
+    console.log('context: ', e.context);
+    console.log('event: ', e);
+    console.log('GridAPI: ', e.api);
+    console.log('columnAPI: ', e.columnApi);
+
     console.log('id: ', e.node.id);
-    console.log('key: ', e.node.key);
     console.log('group: ', e.node.group);
-    console.log('footer: ', e.node.footer);
     console.log('col_id: ', e.column.colId);
     console.log('col_field: ', e.colDef.field);
     };
@@ -342,9 +345,12 @@ forecast_cum_perc_getter = JsCode("""
       var ETC = 1-params.data.total;
       return parseFloat((params.data.total+(duration_so_far/total_days)*ETC)*100).toFixed(1);
     } else {
-      return ''
+      return parseFloat(params.data.total*100).toFixed(1)
     }
 
+  } else if (params.data.forecast_method == "Manual") {
+    var column_string = params.column.colId.substring(0,7).concat("-cF");
+    return parseFloat(params.data[column_string]).toFixed(1);
   }
 
     function getBusinessDatesCount(startDate, endDate) {
@@ -365,6 +371,7 @@ forecast_cum_perc_getter = JsCode("""
 ## Calculate the monthly forecast percentages (ie not cumulative)
 forecast_percentage_getter= JsCode("""
 function(params) {
+  if (params.data.forecast_method == "Timeline") {
     var this_column = params.column.colId;
     var this_year = params.column.colId.substr(0,4);
     var this_month = params.column.colId.substr(5,2);
@@ -374,45 +381,38 @@ function(params) {
     var item_start_date = new Date(item_start.getFullYear(), item_start.getMonth(), item_start.getDate());
     var item_end = new Date(params.data.item_end_date);
     var item_end_date = new Date(item_end.getFullYear(), item_end.getMonth(), item_end.getDate());  
-/*
-    console.log("this_column = ", this_column);
-    console.log("this_year = ", this_year);
-    console.log("this_month = ", this_month);
-    console.log("start_of_month = ", start_of_month);
-    console.log("end_of_month = ", end_of_month);
-    console.log("item_start_date = ", item_start_date);
-    console.log("item_end_date = ", item_end_date);
-*/
 
     let total_days = getBusinessDatesCount(item_start_date, item_end_date);   
 
          /** item starts before month and ends after month **/
     if (item_start_date < start_of_month && item_end_date > end_of_month) {
       var num_of_days = getBusinessDatesCount(start_of_month, end_of_month);
-      return parseFloat(num_of_days/total_days*100).toFixed(1);
     }
 
         /** item starts in month and ends after month  **/
     if (item_start_date >= start_of_month && item_start_date <= end_of_month && item_end_date > end_of_month) {
       var num_of_days = getBusinessDatesCount(item_start_date, end_of_month);
-      return parseFloat(num_of_days/total_days*100).toFixed(2);
     }
 
         /** item starts and finishes in same month **/
     if (item_start_date >= start_of_month && item_end_date <= end_of_month) {
       var num_of_days = getBusinessDatesCount(item_start_date, item_end_date);
-      return parseFloat(num_of_days/total_days*100).toFixed(1);
     }
 
         /** item starts before month and ends in month  **/
     if (item_start_date < start_of_month && item_end_date >= start_of_month && item_end_date <= end_of_month) {
       var num_of_days = getBusinessDatesCount(start_of_month, item_end_date);
-      return parseFloat(num_of_days/total_days*100).toFixed(1);
     }
         /** either item hasnt started yet or has already ended. **/
     if (item_start_date > end_of_month || item_end_date < start_of_month) {
-      return 0
-    }  
+      var num_of_days = 0
+    }
+      return parseFloat((num_of_days/total_days)*(1-params.data.total)*params.data.EAC).toLocaleString('en',{minimumFractionDigits: 0,  maximumFractionDigits: 0});
+  
+  } else if (params.data.forecast_method == "Manual"){
+      var this_column = params.column.colId;
+    return this_column
+  }
 
     function getBusinessDatesCount(startDate, endDate) {
         let count = 0;
@@ -425,18 +425,8 @@ function(params) {
         return count;
     }
 
-    return ''
 };
 """)
-
-
-cumulative_value_getter= JsCode("""
-  function(params) {
-    var previous_month = params.column.colId;
-    return previous_month
-
-  };
-  """)
 
 amount_formatter = JsCode("""
   function(params) {
@@ -524,9 +514,9 @@ another_formatter = JsCode("""
         var ETC = 1-params.data.total;
         return parseFloat((params.data.total+(duration_so_far/total_days)*ETC)*100).toFixed(1);
       } else {
-        return ''
+        return parseFloat(params.data.total*100).toFixed(1);
       }
-    } else {
+    } else if (params.data.forecast_method == "Manual"){
       return parseFloat(params.value).toFixed(3);
     
     }
@@ -551,7 +541,6 @@ another_formatter = JsCode("""
 
 simple_forecast_amount_getter = JsCode("""
   function(params) {
-
     var this_date = new Date(params.column.colId);
     var this_year = String(this_date.getFullYear());
     var this_month = String(this_date.getMonth()+1).padStart(2, '0');
@@ -565,15 +554,16 @@ simple_forecast_amount_getter = JsCode("""
     var last_column_string = last_year.concat("-").concat(last_month);
     var previous_cum_percentage = params.data[last_column_string.concat("-cF")];
 
+  /**  IF NOT FIRST FORECAST MONTH **/
     if (isNaN(previous_cum_percentage)==false) {
-      var amount = (cum_percentage - previous_cum_percentage)*params.data.EAC;
-      return parseFloat(amount).toLocaleString('en',{minimumFractionDigits: 0,  maximumFractionDigits: 0})
-      } else {
-      var amount = (cum_percentage)*params.data.EAC;
-      return parseFloat(amount).toLocaleString('en',{minimumFractionDigits: 0,  maximumFractionDigits: 0})
+      var amount = (previous_cum_percentage)*100;
+      return parseFloat(amount).toLocaleString('en',{minimumFractionDigits: 2,  maximumFractionDigits: 2})
+    }
+  /** IF FIRST FORECAST MONTH  **/  
+    else {
+      var amount = (cum_percentage - params.data.total )*100;
+      return parseFloat(amount).toLocaleString('en',{minimumFractionDigits: 2,  maximumFractionDigits: 2})
       }
-
-    return parseFloat((cum_percentage - previous_cum_percentage)*params.data.EAC).toFixed(1);
   };
   """)
 
@@ -582,9 +572,7 @@ simple_setter = JsCode("""
     if (params.data.forecast_method == "Manual") {
       var cum_percentage = params.newValue;
       var cum_amount = cum_percentage * params.data.EAC;
-      params.data["2022-04-cF"] = newValue;
-      params.data["2022-04$"] = cum_amount;
-      params.data["2022-05$"] = cum_amount;
+      params.data["2022-04-cF"] = params.newValue;
       return true;
     }
 

@@ -293,8 +293,14 @@ def create_cost_data_table(reporting_month_cost_data, cost_forecast_settings, st
                             cost_data_table.apply(lambda x: x[this_range[i].strftime('%Y-%m')] + x[this_range[i-1].strftime('%Y-%m')+'-c'], axis=1) 
                             )
         cost_data_table['total'] = cost_data_table[this_range[i].strftime('%Y-%m')+'-c'] 
-    
-    ### Cumulative forecast percentages
+
+    ### Cumulative forecast percentages - setting to zero
+    # forecast_range = pd.period_range(reporting_month+relativedelta(months=1), forecast_end_date, freq='M')
+    # for i, item in enumerate(forecast_range):
+    #     #  == "Timeline":
+    #     cost_data_table[item.strftime('%Y-%m')+'-cF']=cost_data_table.apply(lambda x: 0.00 if x["forecast_method"] else 1, axis=1)
+
+    ### Cumulative forecast percentages - calculating values
     forecast_range = pd.period_range(reporting_month+relativedelta(months=1), forecast_end_date, freq='M')
     for i, item in enumerate(forecast_range):
         if i == 0:
@@ -304,6 +310,7 @@ def create_cost_data_table(reporting_month_cost_data, cost_forecast_settings, st
                             cost_data_table.apply(
                                 lambda x: x[forecast_range[i-1].strftime('%Y-%m')+'-cF'] + (1-x.total)*x[item.strftime('%Y-%m')+'-F'], axis=1) 
                             )
+    
     cost_data_table['reporting_month']=cost_data_table.apply(lambda x: x['reporting_month'].strftime("%b %Y"), axis=1)
     # cost_data_table['item_start_date']=cost_data_table.apply(lambda x: x['item_start_date'].strftime("%d/%m/%Y"), axis=1)
     # cost_data_table['item_end_date']=cost_data_table.apply(lambda x: x['item_end_date'].strftime("%d/%m/%Y"), axis=1)
