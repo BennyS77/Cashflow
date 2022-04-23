@@ -12,21 +12,9 @@ dropdown_jscode = JsCode("""
   };
   """)
 
-editable = JsCode("""
-  function (params) {
-    if (params.data.forecast_method === "Manual") {
-      return 'true';
-    }
-  };
-  """)
 
-date_editable = JsCode("""
-  function (params) {
-    if (params.data.forecast_method === "Timeline") {
-      return 'true';
-    }
-  };
-  """)
+
+
 
 cell_style_date = JsCode("""
   function (params) {
@@ -165,25 +153,7 @@ value_formatter = JsCode("""
   """)
 
 
-percent_formatter = JsCode("""
-  function(params) {
-    let col_group = params.colDef.field.substr(0,7);
-    let new_col = col_group.concat("$");
-    if (params.value > 0) {
-      if (params.node.group == true && params.node.footer == true) {
-          return parseFloat(params.node.aggData[new_col]/params.node.aggData.EAC*100).toFixed(1);
-      }
-      if (params.node.group != true) {
-        return parseFloat(params.value*100).toFixed(1);
-      }
-      if (params.node.leafGroup == true && params.node.expanded == false ) {
-          return parseFloat(params.node.aggData[new_col]/params.node.aggData.EAC*100).toFixed(1);
-      }
-    } else {
-      return ''
-    }
-  };
-  """)
+
 
 ## Calculate actual cumulative percentages
 actual_cum_perc_getter = JsCode("""
@@ -225,17 +195,7 @@ actual_cum_perc_getter = JsCode("""
 
 
 
-value_getter = JsCode("""
-  function(params) {
-      var this_month_id = params.column.colId.substring(0,7);
-      let col = this_month_id.concat("-c");
-      if (params.data[col] > 0) {
-        return parseFloat(params.data[col]*params.data.EAC).toLocaleString('en',{minimumFractionDigits: 0,  maximumFractionDigits: 0})
-      } else {
-        return ''
-      }
-  };
-  """)
+
 
 
 ## Calculate monthly forecast amounts ##

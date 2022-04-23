@@ -1,9 +1,9 @@
 import streamlit as st
 from dateutil.relativedelta import relativedelta
 import pandas as pd
-from cashflow_jscode import value_formatter, js_changed, js_clicked, row_height, col_span, editable, date_editable, percent_formatter
-from cashflow_jscode import date_formatter, value_getter, cell_style_amount
-from jscode import date_getter, date_setter, forecast_month_amount_getter, forecast_field_formatter, amount_formatter
+from cashflow_jscode import value_formatter, js_changed, js_clicked, row_height, col_span
+from jscode import date_getter, date_setter, forecast_amount_getter, forecast_field_formatter, amount_formatter, percent_formatter
+from jscode import value_getter, editable, date_editable
 
 def config_actual_cost_children(firstMonth, lastMonth):
     actual_children=[{ "headerName": "Costs To Date",
@@ -48,6 +48,7 @@ def config_actual_cost_children(firstMonth, lastMonth):
 def config_forecast_cost_children(report_date, end_date):
     forecast_children=[{
         "headerName":"",
+        'columnGroupShow': 'closed',
         "minWidth":95,
         "maxWidth":95,
         }]
@@ -74,7 +75,7 @@ def config_forecast_cost_children(report_date, end_date):
                         'minWidth': 100,
                         'maxWidth': 100,
                         'suppressMenu':True,
-                        'valueGetter': forecast_month_amount_getter,
+                        'valueGetter': forecast_amount_getter,
                         'valueFormatter': amount_formatter
                     },
                     
@@ -146,16 +147,6 @@ def configure_cost_grid_options(actual_children, forecast_children):
         "cellEditor": 'agRichSelectCellEditor',
         "cellEditorParams": {'values': ['Timeline', 'Manual','S-curve'],},
       },
-      # { 
-      #   "headerName": "Start Date",
-      #   "field": "item_start_date",
-      #   "editable": date_editable,
-      #   'suppressMenu':True,
-      #   'valueFormatter':date_formatter,
-      #   "minWidth": 100,
-      #   "maxWidth": 100,
-      #   "type": ['dateColumn']
-      # },
       { 
         "headerName": "Start Date",
         'colId': "start_date",
@@ -166,15 +157,6 @@ def configure_cost_grid_options(actual_children, forecast_children):
         'valueGetter':date_getter,
         'valueSetter':date_setter,
       },
-      # { 
-      #   "headerName": "End Date",
-      #   "field": "item_end_date",
-      #   "editable": date_editable,
-      #   'suppressMenu':True,
-      #   'valueFormatter':date_formatter,
-      #   "minWidth": 100,
-      #   "maxWidth": 100,
-      # },
       { 
         "headerName": "End Date",
         'colId': "end_date",
@@ -206,8 +188,8 @@ def configure_cost_grid_options(actual_children, forecast_children):
     # "tooltipShowDelay":600,
     # # 'rowHeight':55,
     # 'getRowHeight': row_height,
-    # "onCellValueChanged": js_changed,
-    # "onCellClicked":js_clicked,
+    "onCellValueChanged": js_changed,
+    "onCellClicked":js_clicked,
     # "onGridReady":when_grid_is_ready,
     "suppressAggFuncInHeader":True,
     # "groupIncludeFooter": True,

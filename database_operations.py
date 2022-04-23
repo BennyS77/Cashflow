@@ -9,79 +9,68 @@ import pandas as pd
 # from st_aggrid import AgGrid, JsCode
 # import numpy as np
 
-def drop_table():
-    """  Drop the Forecast Data table from the database.  """
-    sql_query = """DROP TABLE """+st.session_state.forecast_data_table_name
+def drop_table(table_name):
+    st.sidebar.write(f""" DELETING table '{table_name}' from the database... """)
+    sql_query = """DROP TABLE """+table_name
+    st.write(sql_query)
     with st.session_state.engine.begin() as conn:
         conn.execute(sql_query)
-    st.write("deleted table:")
+    st.sidebar.write(f"DELETED table: '{table_name}' from the database.")
     return
 
 
-def writeDetailsToDatabase(forecast_data):
-    """ write the Forecast Details information to the database """
+def write_table_to_database(report_data, table_name):
+    st.sidebar.write(f""" WRITING table '{table_name}' to the database... """)
     dtype_dict={}
-    for item in forecast_data.columns:
+    for item in report_data.columns:
         dtype_dict.update({item:Float})
     dtype_dict.update({
+            "Division":String(40),
             "cost_item":String(30),
+            "Cost_Item_Description":String(40),
             "reporting_month":DateTime,
-            "forecast_end_date":DateTime,
             "item_start_date":DateTime,
-            "item_end_date":DateTime,
-            "forecast_method":String(20),
+            "item_end_date":String(25),
+            "forecast_method":String(25),
     })
-    forecast_data.to_sql(
-        st.session_state.forecast_data_table_name,
+    report_data.to_sql(
+        table_name,
         st.session_state.engine,
         if_exists='replace',
         index=False,
         dtype=dtype_dict
     )
-    st.sidebar.write('Successfully wrote to database:')
-    return 
-
-def appendDatabase(forecast_details, table_name):
-    """ write the Forecast Details information to the database """
-    dtype_dict={}
-    for item in forecast_details.columns:
-        dtype_dict.update({item:Float})
-    dtype_dict.update({
-            "cost_item":String(30),
-            "reporting_month":DateTime,
-            "forecast_end_date":DateTime,
-            "item_start_date":DateTime,
-            "item_end_date":DateTime,
-            "forecast_method":String(20),
-    })
-    forecast_details.to_sql(
-        table_name,
-        st.session_state.engine,
-        if_exists='append',
-        index=False,
-        dtype=dtype_dict
-    )
-    # st.sidebar.write(f'Successfully appended database: {table_name}')
+    st.sidebar.write(f"WROTE table '{table_name}' to the database.")
     return 
 
 
-
-
-def readDetailsFromDatabase():
-    ### .... Read table from the database .... ###
-    my_query = 'SELECT * FROM '+ st.session_state.forecast_data_table_name
+## 3
+def read_table_from_database(table_name):
+    # st.sidebar.write(f""" 3. READING table '{table_name}' from the database... """)
+    my_query = 'SELECT * FROM "' + table_name+'"'
     data = pd.read_sql(
         my_query,
         st.session_state.engine,
         parse_dates=[
             "reporting_month",
-            "forecast_end_date",
             "item_start_date",
             "item_end_date",
         ]
     )
-    # st.sidebar.write('Successfully read from database:')
+    # st.sidebar.write(f"3. Done.")
     return data 
+
+
+## 5
+def table_names():
+    st.sidebar.markdown("###### 5. Getting TABLE NAMES from the database... ")
+    sql_query = "SELECT table_name FROM information_schema.tables WHERE table_schema = 'public' ORDER BY table_name;"
+    data = pd.read_sql(
+        sql_query,
+        st.session_state.engine,
+    )
+    st.sidebar.write("###### 5. Done. ")
+    return data
 
 
 
@@ -141,3 +130,25 @@ def update_table(table_name, col, new_value, where_col, where_value):
 
 
 
+def appendDatabase(forecast_details, table_name):
+    """ write the Forecast Details information to the database """
+    dtype_dict={}
+    for item in forecast_details.columns:
+        dtype_dict.update({item:Float})
+    dtype_dict.update({
+            "cost_item":String(30),
+            "reporting_month":DateTime,
+            "forecast_end_date":DateTime,
+            "item_start_date":DateTime,
+            "item_end_date":DateTime,
+            "forecast_method":String(20),
+    })
+    forecast_details.to_sql(
+        table_name,
+        st.session_state.engine,
+        if_exists='append',
+        index=False,
+        dtype=dtype_dict
+    )
+    # st.sidebar.write(f'Successfully appended database: {table_name}')
+    return 

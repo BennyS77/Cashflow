@@ -33,7 +33,7 @@ amount_formatter = JsCode("""
   """)
 
 
-forecast_month_amount_getter = JsCode("""
+forecast_amount_getter = JsCode("""
     function(params) {
         var this_date = new Date(params.column.colId.substr(0,7));
         var this_year = String(this_date.getFullYear());
@@ -100,7 +100,6 @@ date_setter = JsCode("""
         for (let x in params.data) {
             if (x.substr(9,1)=="F"){
                 console.log('x = ', x);
-                console.log('start date = ', params.data.item_start_date);
                 params.data[x] = calculate_cumulative_percentage(x);
             }
         }
@@ -113,10 +112,14 @@ date_setter = JsCode("""
         let this_month = this_column.substr(5,2);
         let start_of_month = new Date(this_year, this_month-1, 1);
         let end_of_month = new Date(this_year, this_month, 0);
-        let item_start = new Date(params.data.item_start_date);
-        let item_start_date = new Date(item_start.getFullYear(), item_start.getMonth(), item_start.getDate());
-        let item_end = new Date(params.data.item_end_date);
-        let item_end_date = new Date(item_end.getFullYear(), item_end.getMonth(), item_end.getDate());  
+
+        let start_date = params.data.item_start_date.split('/');
+        let item_start_date = new Date(start_date[2], start_date[1]-1, start_date[0]);
+        console.log('item_start_date = ', item_start_date);
+        let end_date = params.data.item_end_date.split('/');
+        let item_end_date = new Date(end_date[2], end_date[1]-1, end_date[0]);
+        console.log('item_end_date = ', item_end_date);
+
         let total_days = getBusinessDatesCount(item_start_date, item_end_date);   
         if (item_start_date > end_of_month) {
             var duration_so_far = 0;
@@ -158,6 +161,53 @@ date_setter = JsCode("""
 """)
 
 
+percent_formatter = JsCode("""
+  function(params) {
+    let col_group = params.colDef.field.substr(0,7);
+    let new_col = col_group.concat("$");
+    if (params.value > 0) {
+      if (params.node.group == true && params.node.footer == true) {
+          return parseFloat(params.node.aggData[new_col]/params.node.aggData.EAC*100).toFixed(1);
+      }
+      if (params.node.group != true) {
+        return parseFloat(params.value*100).toFixed(1);
+      }
+      if (params.node.leafGroup == true && params.node.expanded == false ) {
+          return parseFloat(params.node.aggData[new_col]/params.node.aggData.EAC*100).toFixed(1);
+      }
+    } else {
+      return ''
+    }
+  };
+  """)
+
+value_getter = JsCode("""
+  function(params) {
+      var this_month_id = params.column.colId.substring(0,7);
+      /** if cumulative --> let col = this_month_id.concat("-c"); **/
+      let col = this_month_id;
+      if (params.data[col] > 0) {
+        return parseFloat(params.data[col]*params.data.EAC).toLocaleString('en',{minimumFractionDigits: 0,  maximumFractionDigits: 0})
+      } else {
+        return ''
+      }
+  };
+  """)
 
 
+editable = JsCode("""
+  function (params) {
+    if (params.data.forecast_method === "Manual") {
+      return 'true';
+    }
+  };
+  """)
+
+date_editable = JsCode("""
+  function (params) {
+    if (params.data.forecast_method === "Timeline") {
+      return 'true';
+    }
+  };
+  """)
 
