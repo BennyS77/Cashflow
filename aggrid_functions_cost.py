@@ -1,20 +1,41 @@
 import streamlit as st
 from dateutil.relativedelta import relativedelta
 import pandas as pd
-from cashflow_jscode import value_formatter, js_changed, js_clicked, row_height, col_span
+from cashflow_jscode import js_changed, js_clicked, row_height, col_span
 from jscode import date_getter, date_setter, forecast_amount_getter, forecast_field_formatter, amount_formatter, percent_formatter
-from jscode import value_getter, editable, date_editable
+from jscode import value_getter, editable, date_editable, value_formatter, actual_amount_vgetter
 
 def config_actual_cost_children(firstMonth, lastMonth):
-    actual_children=[{ "headerName": "Costs To Date",
+    actual_children=[{ 
+        'headerName': '%',
         'columnGroupShow': 'closed',
         'suppressMenu':True,
-        'minWidth': 110,
-        'maxWidth': 110,
-        "aggFunc": "sum",
-        "cellClass": 'ag-right-aligned-cell',
-        "valueGetter":"parseFloat(data.total * data.EAC).toLocaleString('en',{minimumFractionDigits: 0,  maximumFractionDigits: 0})"
-      }]
+        'minWidth': 60,
+        'maxWidth': 60,
+        # "aggFunc": "sum",
+        "type": [
+                      "numericColumn",
+                      "numberColumnFilter"
+                    ],
+    
+        # "cellClass": 'ag-right-aligned-cell',
+        # "valueGetter":"parseFloat(data.total*100).toFixed(1)"
+      },
+      {
+        'headerName': '$',
+        'columnGroupShow': 'closed',
+        'suppressMenu':True,
+        'minWidth': 100,
+        'maxWidth': 100,
+        # "aggFunc": "sum",
+        "type": [
+                      "numericColumn",
+                      "numberColumnFilter"
+                    ],
+        # "cellClass": 'ag-right-aligned-cell',
+        "valueGetter": actual_amount_vgetter
+      }
+      ]
     for i, item in enumerate(pd.period_range(firstMonth, lastMonth, freq='M')):
         column_id = item.strftime('%Y-%m')
         header_month = item.strftime('%b %Y')
@@ -29,7 +50,7 @@ def config_actual_cost_children(firstMonth, lastMonth):
                         'minWidth': 60,
                         'maxWidth': 60,
                         'suppressMenu':True,
-                        "valueFormatter": percent_formatter,
+                        # "valueFormatter": percent_formatter,
                     },
                     {
                         'headerName' : ' $ ',
@@ -37,7 +58,7 @@ def config_actual_cost_children(firstMonth, lastMonth):
                         'minWidth': 70,
                         'maxWidth': 70,
                         'suppressMenu':True,
-                        "valueGetter": value_getter
+                        # "valueGetter": value_getter
                     },
                 ]
             },
@@ -47,11 +68,35 @@ def config_actual_cost_children(firstMonth, lastMonth):
 
 def config_forecast_cost_children(report_date, end_date):
     forecast_children=[{
-        "headerName":"",
+        'headerName': '%',
         'columnGroupShow': 'closed',
-        "minWidth":95,
-        "maxWidth":95,
-        }]
+        'suppressMenu':True,
+        'minWidth': 60,
+        'maxWidth': 60,
+        "aggFunc": "sum",
+        "type": [
+                      "numericColumn",
+                      "numberColumnFilter"
+                    ],
+    
+        # "cellClass": 'ag-right-aligned-cell',
+        "valueGetter":"parseFloat((1-data.total)*100).toFixed(1)"
+        },
+        {
+        'headerName': '$',
+        'columnGroupShow': 'closed',
+        'suppressMenu':True,
+        'minWidth': 100,
+        'maxWidth': 100,
+        "aggFunc": "sum",
+        "type": [
+                      "numericColumn",
+                      "numberColumnFilter"
+                    ],
+    
+        # "cellClass": 'ag-right-aligned-cell',
+        "valueGetter":"parseFloat((1-data.total)*data.EAC).toLocaleString('en',{minimumFractionDigits: 0,  maximumFractionDigits: 0})"
+      }]
     for i, item in enumerate(pd.period_range(report_date, end_date, freq='M')):
         column_id = item.strftime('%Y-%m')
         header_month = item.strftime('%b %Y')
@@ -69,6 +114,7 @@ def config_forecast_cost_children(report_date, end_date):
                         'suppressMenu':True,
                         'valueFormatter': forecast_field_formatter
                     },
+                    
                     {
                         'headerName' : '$',
                         'colId': column_id+'m%',
@@ -100,8 +146,10 @@ def configure_cost_grid_options(actual_children, forecast_children):
       { 
         "headerName": "Division",
         "field": "Division",
-        # "hide":True,
-        # 'rowGroup':True,
+        "minWidth":140,
+        "maxWidth":140,
+        "hide":True,
+        'rowGroup':True,
       },
       { "headerName": "Cost Item",
         "field": "cost_item",
@@ -109,6 +157,8 @@ def configure_cost_grid_options(actual_children, forecast_children):
         'suppressMenu':True,
       },
       { "headerName": "Description",
+        "minWidth":150,
+        "maxWidth":150,
         "field": "Cost_Item_Description",
       },
       { "headerName": "Est. At Completion",
@@ -119,23 +169,6 @@ def configure_cost_grid_options(actual_children, forecast_children):
         "minWidth":135,
         "maxWidth":135,
         "valueFormatter": value_formatter
-      },
-      { 
-        "headerName": "Historical",
-        "field": "Actual",
-        'headerClass':'header-class-actual',
-        # 'openByDefault':True,
-        "headerTooltip":"Expand for historical monthly cost data",
-        "children":actual_children
-      },
-      { 
-        "headerName": "Est. To Completion",
-        "aggFunc": "sum",
-        'suppressMenu':True,
-        "minWidth": 135,
-        "maxWidth": 135,
-        "cellClass": 'ag-right-aligned-cell',
-        "valueGetter":"parseFloat(data.EAC-(data.total * data.EAC)).toLocaleString('en',{minimumFractionDigits: 0,  maximumFractionDigits: 0})"
       },
       { 
         "headerName": "Forecast Method",
@@ -168,17 +201,26 @@ def configure_cost_grid_options(actual_children, forecast_children):
         'valueSetter':date_setter,
       },
       { 
-        "headerName": "Forecast",
-        "openByDefault":True,
-        "children":forecast_children,
-        "maxWidth": 175,
+        "headerName": "Actual Costs To Date",
+        # 'headerClass':'header-class-actual',
+        # 'openByDefault':True,
+        "headerTooltip":"Expand for historical monthly cost data",
+        "children":actual_children
       },
+      # { 
+      #   "headerName": "Est. To Completion",
+      #   # "openByDefault":True,
+      #   "children":forecast_children,
+      #   # "maxWidth": 175,
+      # },
       
     ],
     "debug":True,
     "autoGroupColumnDef": {
         "field":"autoGroup",
         "headerName": 'Division',
+        "minWidth": 175,
+        "maxWidth": 175,
         "cellRendererParams": {
             "suppressCount": True,
         }
@@ -192,9 +234,9 @@ def configure_cost_grid_options(actual_children, forecast_children):
     "onCellClicked":js_clicked,
     # "onGridReady":when_grid_is_ready,
     "suppressAggFuncInHeader":True,
-    # "groupIncludeFooter": True,
-    # # "groupIncludeTotalFooter": True,
-    # 'animateRows':True,
+    "groupIncludeFooter": True,
+    "groupIncludeTotalFooter": True,
+    'animateRows':True,
     # 'enableCharts': True,
     'groupDefaultExpanded':True,
     # 'enableRangeSelection': True,

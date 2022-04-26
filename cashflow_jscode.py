@@ -97,6 +97,9 @@ js_clicked = JsCode("""function(e) {
     console.log('columnAPI: ', e.columnApi);
 
     console.log('id: ', e.node.id);
+    console.log('leafGroup: ', e.node.leafGroup);
+    console.log('footer: ', e.node.footer);
+    console.log('expanded: ', e.node.expanded);
     console.log('group: ', e.node.group);
     console.log('col_id: ', e.column.colId);
     console.log('col_field: ', e.colDef.field);
@@ -135,22 +138,7 @@ date_formatter = JsCode("""
   """)
 
 
-value_formatter = JsCode("""
-  function(params) {
-    if (params.node.group != true && params.node.rowPinned != 'top') {
-      return parseFloat(params.value).toLocaleString('en',{minimumFractionDigits: 0,  maximumFractionDigits: 0})
-    }
-    if (params.node.footer == true) {
-      return parseFloat(params.value).toLocaleString('en',{minimumFractionDigits: 0,  maximumFractionDigits: 0})
-    }
-    if (params.node.leafGroup == true && params.node.expanded == false ) {
-      return parseFloat(params.value).toLocaleString('en',{minimumFractionDigits: 0,  maximumFractionDigits: 0})
-    }
-    if (params.node.rowPinned === 'top') {
-      return parseFloat(params.value).toLocaleString('en',{minimumFractionDigits: 0,  maximumFractionDigits: 0})
-    }
-  };
-  """)
+
 
 
 

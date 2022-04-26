@@ -73,16 +73,20 @@ forecast_amount_getter = JsCode("""
 
 date_getter = JsCode("""
     function(params) {
-        if (params.data.forecast_method == "Timeline") {
+        if (params.node.group != true && params.data.forecast_method == "Timeline") {
             if (params.column.colId == "start_date") {
-                return params.data.item_start_date;
+               return params.data.item_start_date;
             }
             if (params.column.colId == "end_date") {
                 return params.data.item_end_date;
             }
         }
-        if (params.data.forecast_method == "Manual") {
+        if (params.node.group != true && params.data.forecast_method == "Manual") {
             return '-';
+        }
+
+        function what_row_is_it(my_value) {
+            return my_value;
         }
   };
   """)
@@ -181,6 +185,27 @@ percent_formatter = JsCode("""
   };
   """)
 
+
+actual_amount_vgetter = JsCode("""
+    function(params) {
+        if (params.node.group != true && params.node.rowPinned != 'top') {
+            return parseFloat(params.data.total*params.data.EAC).toLocaleString('en',{minimumFractionDigits: 0,  maximumFractionDigits: 0})
+        }
+        if (params.node.footer == true) {
+            return parseFloat(22).toLocaleString('en',{minimumFractionDigits: 0,  maximumFractionDigits: 0})
+        }
+    };
+""")
+
+# if (params.node.group != true) {
+#             return parseFloat(222).toLocaleString('en',{minimumFractionDigits: 0,  maximumFractionDigits: 0})
+#         }
+# if (params.node.group == true) {
+#             return parseFloat(333).toLocaleString('en',{minimumFractionDigits: 0,  maximumFractionDigits: 0})
+#         }
+
+
+
 value_getter = JsCode("""
   function(params) {
       var this_month_id = params.column.colId.substring(0,7);
@@ -205,9 +230,26 @@ editable = JsCode("""
 
 date_editable = JsCode("""
   function (params) {
-    if (params.data.forecast_method === "Timeline") {
+    if (params.node.group != true && params.data.forecast_method === "Timeline") {
       return 'true';
     }
   };
   """)
 
+
+value_formatter = JsCode("""
+  function(params) {
+    if (params.node.group != true && params.node.rowPinned != 'top') {
+      return parseFloat(params.value).toLocaleString('en',{minimumFractionDigits: 0,  maximumFractionDigits: 0})
+    }
+    if (params.node.footer == true) {
+      return parseFloat(params.value).toLocaleString('en',{minimumFractionDigits: 0,  maximumFractionDigits: 0})
+    }
+    if (params.node.leafGroup == true && params.node.expanded == false ) {
+      return parseFloat(params.value).toLocaleString('en',{minimumFractionDigits: 0,  maximumFractionDigits: 0})
+    }
+    if (params.node.rowPinned === 'top') {
+      return parseFloat(params.value).toLocaleString('en',{minimumFractionDigits: 0,  maximumFractionDigits: 0})
+    }
+  };
+  """)

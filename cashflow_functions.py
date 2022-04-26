@@ -65,34 +65,11 @@ def user_login():
     return
 
 
-def user_login_old():
-    """  User login """
-    def login_form(credentials):
-        st.session_state.creds = credentials
-        st.session_state.login_confirmed = True
-        return
-
-    st.sidebar.markdown("# ")
-    st.sidebar.markdown("## Login")
-    with st.sidebar.form('credentials', clear_on_submit=True):
-        ### 
-        client_id = st.text_input('Client ID:','321081') 
-        username = st.text_input('Username:','JP.API')  
-        password = st.text_input('Password:',type="password") 
-        # client_id = '317016'
-        # username = 'BenStewart'
-        # password = 'Woerifjoi439856'
-        creds_dict = {"username":client_id+'\\'+username, "password":password}
-        st.form_submit_button('Submit', kwargs = dict(credentials = creds_dict), on_click = login_form)
-    return
-
-
-
 @st.experimental_memo()
 def fetch_Odata(dataset, columns='*', filter=""):
     URL = "https://reporting.jonas-premier.com/OData/ODataService.svc/"+dataset
     query = "?$filter="+filter + "&$select="+columns + "&$format=json"
-    user_auth = (st.session_state.creds['username'], st.session_state.creds['password']) 
+    user_auth = (st.session_state.credentials['username'], st.session_state.credentials['password']) 
     # user_auth = ('321059\KeypaySyncAPI', 'gXs6SwBkDTKmw8Hv')     # Colibrico
     # user_auth = ('321081\JP.API',        'JQ24Ty3H4sr6A1PWa')    # Reitsma
     # user_auth = ('321078/KeypaySyncAPI', 'MACcB8xtNNJ65fk6')	# Phase3
@@ -176,7 +153,6 @@ def select_company_and_job(testing):
 
 
 def get_cost_estimate_data(job):
-    # st.sidebar.write("Get cost estimate data:")
     df_1 = fetch_Odata(
                 dataset = 'JobReportByCostItemAndCostTypes', 
                 columns = "Division,Cost_Item,Cost_Item_Description,Estimate_At_Completion",
@@ -184,18 +160,20 @@ def get_cost_estimate_data(job):
                 )
     df_1 = df_1.rename(columns = {'Cost_Item':'cost_item','Estimate_At_Completion':'EAC'})
     df_1['EAC']=df_1['EAC'].astype(float)
-    # st.write("cost estimate data")
-    # st.write(df_1)
+    df_1 = df_1.groupby(['cost_item']).agg({'EAC':['sum'],'Division':['first'],'Cost_Item_Description':['first']})
+    df_1 = df_1.droplevel(level=1, axis=1)
+    df_1.reset_index(level=0, inplace=True)
+    df_1['EAC']=df_1['EAC'].astype(float)
     return df_1
 
 
-def get_all_cost_data(cost_data):
+def get_all_cost_data():
     # st.sidebar.write("Formatting cost data")
-    # cost_data = fetch_Odata(
-    #         dataset = 'JobCostSummaryByFiscalPeriods', 
-    #         columns = "Company_Code,Job_Number,Fiscal_Period,Cost_Item,Actual_Dollars")
-    # cost_data = cost_data[cost_data['Company_Code']==company]
-    # cost_data = cost_data[cost_data['Job_Number']==job]
+    cost_data = fetch_Odata(
+            dataset = 'JobCostSummaryByFiscalPeriods', 
+            columns = "Company_Code,Job_Number,Fiscal_Period,Cost_Item,Actual_Dollars")
+    cost_data = cost_data[cost_data['Company_Code']==st.session_state.company]
+    cost_data = cost_data[cost_data['Job_Number']==st.session_state.job]
     cost_data = cost_data[['Cost_Item','Actual_Dollars','Fiscal_Period']]
     cost_data['Fiscal_Period'] = pd.to_datetime(cost_data['Fiscal_Period'], format='%Y-%m')
     cost_data['Actual_Dollars']=cost_data['Actual_Dollars'].astype(float)
@@ -250,9 +228,9 @@ def select_forecast_end_date():
     return forecast_end_date
 
 
-def create_cost_data_for_reporting_month(cost_estimate_data, cost_by_fiscal_period, date_range):
+def create_cost_data_for_reporting_month(cost_estimate_data, cost_by_fiscal_period, date_range, reporting_month):
     first_month = date_range[0]
-    last_month = st.session_state.reporting_month
+    last_month = reporting_month
     d_end=[0]*len(pd.period_range(first_month, last_month, freq='M'))
     for i in range(len(pd.period_range(first_month, last_month, freq='M'))):
             d_start=pd.Period(first_month+relativedelta(months=i), freq='M').start_time.date()
@@ -266,7 +244,7 @@ def create_cost_data_for_reporting_month(cost_estimate_data, cost_by_fiscal_peri
     cost_by_fiscal_period = cost_by_fiscal_period.rename(columns = {'Cost_Item':'cost_item'})
     
     merged_data = pd.merge(cost_by_fiscal_period, cost_estimate_data, on='cost_item', how='left')
-    merged_data['reporting_month'] = st.session_state.reporting_month
+    merged_data['reporting_month'] = reporting_month
     
     cols = list(merged_data.columns.values)
     col_list = [ cols[-1], cols[-4], cols[0], cols[-3], cols[-2] ]
@@ -313,12 +291,12 @@ def get_cost_forecast_settings(cost_estimate_data, reporting_month, forecast_end
         EITHER GET SETTINGS FROM DATABASE TABLE OR CREATE NEW DEFAULT SETTINGS
     """
     df = pd.DataFrame(cost_estimate_data['cost_item'])
-    df['reporting_month']=reporting_month.date()
-    df['item_start_date']=df['reporting_month'].apply(lambda x: pd.Period(x,freq='M').start_time.date() + relativedelta(months=1))
-    df['item_end_date']=forecast_end_date.date()
+    df['reporting_month']=reporting_month
+    df['item_start_date']=df['reporting_month'].apply(lambda x: pd.Period(x,freq='M').start_time + relativedelta(months=1))
+    df['item_end_date']=forecast_end_date
     df['forecast_method']="Timeline"
 
-    df['num_of_days_duration'] = df.apply(lambda x: np.busday_count(x.item_start_date, x.item_end_date, weekmask=[1,1,1,1,1,0,0]), axis = 1)
+    df['num_of_days_duration'] = df.apply(lambda x: np.busday_count(x.item_start_date.date(), x.item_end_date.date(), weekmask=[1,1,1,1,1,0,0]), axis = 1)
     df['days_left'] = df['num_of_days_duration']
     forecast_date_range = pd.period_range(reporting_month+relativedelta(months=1), forecast_end_date, freq='M').to_timestamp()
     for i in range(len(forecast_date_range)):
@@ -386,7 +364,7 @@ def create_cost_data_table(reporting_month_cost_data, cost_forecast_settings, st
                                 lambda x: x[forecast_range[i-1].strftime('%Y-%m')+'-cF'] + (1-x.total)*x[item.strftime('%Y-%m')+'-F'], axis=1) 
                             )
     
-    # cost_data_table['reporting_month']=cost_data_table.apply(lambda x: x['reporting_month'].strftime("%b %Y"), axis=1)
+    # cost_data_table['reporting_month']=cost_data_table.apply(lambda x: datetime.timestamp(x['reporting_month']), axis=1)
     # cost_data_table['item_start_date']=cost_data_table.apply(lambda x: x['item_start_date'].strftime("%d/%m/%Y"), axis=1)
     # cost_data_table['item_end_date']=cost_data_table.apply(lambda x: x['item_end_date'].strftime("%d/%m/%Y"), axis=1)
     # cols = list(cost_data_table.columns.values)
@@ -399,12 +377,10 @@ def create_cost_data_table(reporting_month_cost_data, cost_forecast_settings, st
 
 ## 4
 def get_whole_cost_table(table_name):
-    st.sidebar.write(f"""  4. READ table '{table_name}' from the database:  """)
+    # st.sidebar.write(f"""  4. READ table '{table_name}' from the database:  """)
     table = read_table_from_database(table_name)
-    st.write("4. Table from the database")
-    st.write(table)
-    # table['reporting_month'] = table.apply(lambda x: datetime.strptime(x.reporting_month, "%b %Y"), axis=1)
     forecast_end_date = table['item_end_date'].max()
+
     cols = list(table.columns.values)
     date_cols = []
     for column in cols:
@@ -413,15 +389,10 @@ def get_whole_cost_table(table_name):
             date_cols.append(datetime.strptime(column,"%Y-%m"))
         except:
             pass
-    # st.write(date_cols)
+    
     first_month = min(date_cols)
+    
     reporting_month_list = table['reporting_month'].drop_duplicates().tolist()
-    reporting_month_list.append('')
-    # st.write(table)
-    # st.write(date_range[0])
-    # st.write(reporting_month_list)
-    # st.write(forecast_end_date)
-    st.sidebar.write(f"""  4. Have table '{table_name}' from the database.  """)
     return table, first_month, reporting_month_list, forecast_end_date
 
 
@@ -432,12 +403,9 @@ def get_whole_cost_table(table_name):
 
 
 def display_cost_in_grid(cost_data_table, start_date, reporting_month, forecast_end_date):
-    try:
-        cost_data_table['reporting_month']=cost_data_table.apply(lambda x: x['reporting_month'].strftime("%b %Y"), axis=1)
-        cost_data_table['item_start_date']=cost_data_table.apply(lambda x: x['item_start_date'].strftime("%d/%m/%Y"), axis=1)
-        cost_data_table['item_end_date']=cost_data_table.apply(lambda x: x['item_end_date'].strftime("%d/%m/%Y"), axis=1)
-    except:
-        st.write("Whoops!! Dates are already in string format or data is wrong...")
+    cost_data_table['reporting_month']=cost_data_table.apply(lambda x: x['reporting_month'].strftime("%b %Y"), axis=1)
+    cost_data_table['item_start_date']=cost_data_table.apply(lambda x: x['item_start_date'].strftime("%d/%m/%Y"), axis=1)
+    cost_data_table['item_end_date']=cost_data_table.apply(lambda x: x['item_end_date'].strftime("%d/%m/%Y"), axis=1)
     
     # st.write('cost_data_table being used in table')
     # st.write(cost_data_table)
@@ -454,14 +422,11 @@ def display_cost_in_grid(cost_data_table, start_date, reporting_month, forecast_
                 height = 350,
                 enable_enterprise_modules=True,
                 fit_columns_on_grid_load=True,
-                key = st.session_state.grid_key,   #- set a key to stop the grid reinitialising when the dataframe changes
-                # reload_data=True,  
+                key = st.session_state.grid_key,
                 reload_data=False,  
                 data_return_mode='AS_INPUT',
-                #   data_return_mode='FILTERED',
                 # update_mode='VALUE_CHANGED',   ## default
                 update_mode='MODEL_CHANGED',
-                # update_mode='MANUAL',
                 allow_unsafe_jscode=True,
                 theme="light"
     )
@@ -511,12 +476,12 @@ def get_job(costs_for_company):
 
 ## 3
 def check_for_database_table(table_name):
-    st.sidebar.markdown("###### Checking if report data exists...")
+    # st.sidebar.markdown("###### Checking if report data exists...")
     table_list = table_names().table_name.tolist()
     # st.write(table_list)
     if table_name in table_list:
-        st.sidebar.write(f"Table '{table_name}' exists.")
+        # st.sidebar.markdown("### Job data table exists.")
         return True
     else:
-        st.sidebar.markdown("#### Report does not exist - create new report.")
+        # st.sidebar.markdown("### Job data table does not exist.")
         return False

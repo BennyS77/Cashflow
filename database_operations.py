@@ -20,14 +20,14 @@ def drop_table(table_name):
 
 
 def write_table_to_database(report_data, table_name):
-    st.sidebar.write(f""" WRITING table '{table_name}' to the database... """)
+    # st.sidebar.write(f""" WRITING table '{table_name}' to the database... """)
     dtype_dict={}
     for item in report_data.columns:
         dtype_dict.update({item:Float})
     dtype_dict.update({
             "Division":String(40),
             "cost_item":String(30),
-            "Cost_Item_Description":String(40),
+            "Cost_Item_Description":String(60),
             "reporting_month":DateTime,
             "item_start_date":DateTime,
             "item_end_date":String(25),
@@ -40,7 +40,7 @@ def write_table_to_database(report_data, table_name):
         index=False,
         dtype=dtype_dict
     )
-    st.sidebar.write(f"WROTE table '{table_name}' to the database.")
+    # st.sidebar.write(f"WROTE table '{table_name}' to the database.")
     return 
 
 
@@ -61,21 +61,44 @@ def read_table_from_database(table_name):
     return data 
 
 
-## 5
 def table_names():
-    st.sidebar.markdown("###### 5. Getting TABLE NAMES from the database... ")
     sql_query = "SELECT table_name FROM information_schema.tables WHERE table_schema = 'public' ORDER BY table_name;"
     data = pd.read_sql(
         sql_query,
         st.session_state.engine,
     )
-    st.sidebar.write("###### 5. Done. ")
     return data
 
 
 
+def update_table(table_name, col, new_value, where_col, where_value, where_col2, where_value2):
+    table_name='"'+table_name+'"'
+    # new_value ="'"+new_value+"'"
+    # where_value ="'"+where_value+"'"
+    # where_value2 ="'"+where_value2+"'"
+    sql_query = """
+        UPDATE """+table_name+"""
+        SET """+col+""" = """+new_value+"""
+        WHERE """+where_col+""" = """+where_value+""" and """+where_col2+""" = """+where_value2
+    # st.sidebar.write(sql_query)
+    with st.session_state.engine.begin() as conn:
+        conn.execute(sql_query)
+    return
 
 
+
+
+
+
+
+
+def other_update_table(table_name, col, new_value, where_col, where_value):
+    sql_query = 'UPDATE "'+table_name+'" SET "forecast_method" = Manual"'
+    # WHERE '+where_col+' = "'+where_value+'";'
+    st.sidebar.write(sql_query)
+    with st.session_state.engine.begin() as conn:
+        conn.execute(sql_query)
+    return
 
 
 
@@ -120,13 +143,6 @@ def readDatabase(table_name):
 
 
 
-def update_table(table_name, col, new_value, where_col, where_value):
-    sql_query = """
-        UPDATE """+table_name+"""
-        SET """+col+""" = """+new_value+"""
-        WHERE """+where_col+""" = """+where_value
-    with st.session_state.engine.begin() as conn:
-        conn.execute(sql_query)
 
 
 
