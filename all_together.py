@@ -78,13 +78,10 @@ def report_month_selection():
 
 def get_forecast_end_date():
     def end_date_change():
-        st.session_state.show_forecast_end_date = True
-        ## Convert datetime.date to timestamp as needed in 'get_cost_forecast_settings' ##
-        my_time = datetime.min.time()
-        st.session_state.forecast_end_date = datetime.combine(st.session_state.forecast_end_date, my_time)
+        # st.session_state.show_forecast_end_date = True
         return
     st.sidebar.date_input(label="Forecast End Date:",
-                        value=pd.Period(datetime.today() + relativedelta(months=6), freq='M').end_time,
+                        # value=pd.Period(datetime.today() + relativedelta(months=6), freq='M').end_time,
                         on_change = end_date_change,
                         key = 'forecast_end_date'
                         )
@@ -122,9 +119,9 @@ if testing:
     st.sidebar.markdown(f"#### Session Re-run: {st.session_state.session_number}")
     st.session_state.credentials = {"username":'321081\JP.API', "password":'JQ24Ty3H4sr6A1PWa'}
     st.session_state.login_confirmed = True
-    st.session_state.company_list = ['RC', ""]
-    st.session_state.company = 'RC'
-    st.session_state.job = '20-4075'
+    # st.session_state.company_list = ['RC', ""]
+    # st.session_state.company = 'RC'
+    # st.session_state.job = '20-4075'
 
 if st.session_state.login_confirmed:
     """
@@ -150,9 +147,24 @@ if st.session_state.login_confirmed:
                 """
                 ...HAVE FORECAST END DATE - CREATE NEW JOB TABLE IN DATABASE FOR CURRENT REPORTING PERIOD...
                 """
+                st.sidebar.write(f"forecast end date: {st.session_state.forecast_end_date}")
                 cost_data_table = create_job_cost_data_table()
+                st.write(cost_data_table)
                 write_table_to_database(cost_data_table, table_name)
-                st.experimental_rerun()
+                # st.experimental_rerun()
+                # ### FOR TESTING.... remove all remaining until 'else'
+                # st.session_state.job_data_table = cost_data_table
+                # st.session_state.reporting_month_list = st.session_state.job_data_table['reporting_month'].drop_duplicates().tolist()
+                # st.session_state.show_reporting_month = True
+                # if st.session_state.reporting_month != "":
+                #     """
+                #     ...REPORTING MONTH SELECTED...
+                #     """
+                #     st.session_state.grid_cost_data = st.session_state.job_data_table[st.session_state.job_data_table['reporting_month']==st.session_state.reporting_month]
+                #     st.session_state.grid_cost_data['item_start_date']=st.session_state.grid_cost_data.apply(lambda x: x['item_start_date'].strftime("%d/%m/%Y"), axis=1)
+                #     st.session_state.grid_cost_data['item_end_date'] = st.session_state.grid_cost_data.apply(lambda x: x['item_end_date'].strftime("%d/%m/%Y"), axis=1)
+                #     st.session_state.ready_for_grid = True
+                st.sidebar.button("rerun")
         else:
             """
             ...JOB DATA 'DOES' EXIST IN THE DATABASE...
@@ -198,7 +210,8 @@ if st.session_state.login_confirmed:
         forecast_children = config_forecast_cost_children(st.session_state.reporting_month+relativedelta(months=1), forecast_end_date)
         grid_options = configure_cost_grid_options(actual_children, forecast_children)
 
-        
+        # st.write(st.session_state.job_data_table)
+
         grid_response = AgGrid(
                 dataframe = st.session_state.grid_cost_data,
                 gridOptions = grid_options, 
@@ -243,6 +256,14 @@ if st.session_state.login_confirmed:
 
 else:
     user_login()
+
+
+if st.sidebar.button("Clear all"):
+    st.experimental_memo.clear()
+
+
+### LOOK AT: 'value cache', 'column filters'
+
 
 # current_report_period = pd.Period(datetime.today()+relativedelta(months=-1), freq='M').start_time
                 # # if st.session_state.job_data_table['reporting_month'].max() == current_report_period:

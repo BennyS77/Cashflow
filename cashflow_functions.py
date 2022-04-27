@@ -290,6 +290,9 @@ def get_cost_forecast_settings(cost_estimate_data, reporting_month, forecast_end
     """
         EITHER GET SETTINGS FROM DATABASE TABLE OR CREATE NEW DEFAULT SETTINGS
     """
+    ## Convert datetime.date to timestamp as needed to calculate number of weekdays ##
+    my_time = datetime.min.time()
+    forecast_end_date = datetime.combine(forecast_end_date, my_time)
     df = pd.DataFrame(cost_estimate_data['cost_item'])
     df['reporting_month']=reporting_month
     df['item_start_date']=df['reporting_month'].apply(lambda x: pd.Period(x,freq='M').start_time + relativedelta(months=1))
@@ -340,10 +343,10 @@ def create_cost_data_table(reporting_month_cost_data, cost_forecast_settings, st
     this_range = pd.period_range(start, reporting_month, freq='M')
     for i, item in enumerate(this_range):
         if i == 0:
-            cost_data_table[item.strftime('%Y-%m')+'-c']=cost_data_table.apply(lambda x: x[item.strftime('%Y-%m')], axis=1)
+            cost_data_table[item.strftime('%Y-%m')+'-c']=cost_data_table.apply(lambda x: x[item.strftime('%Y-%m')]*100, axis=1)
         else:
             cost_data_table[this_range[i].strftime('%Y-%m')+'-c'] = (
-                            cost_data_table.apply(lambda x: x[this_range[i].strftime('%Y-%m')] + x[this_range[i-1].strftime('%Y-%m')+'-c'], axis=1) 
+                            cost_data_table.apply(lambda x: x[this_range[i].strftime('%Y-%m')]*100 + x[this_range[i-1].strftime('%Y-%m')+'-c'], axis=1) 
                             )
         cost_data_table['total'] = cost_data_table[this_range[i].strftime('%Y-%m')+'-c'] 
 
@@ -357,11 +360,11 @@ def create_cost_data_table(reporting_month_cost_data, cost_forecast_settings, st
     forecast_range = pd.period_range(reporting_month+relativedelta(months=1), forecast_end_date, freq='M')
     for i, item in enumerate(forecast_range):
         if i == 0:
-            cost_data_table[item.strftime('%Y-%m')+'-cF']=cost_data_table.apply(lambda x: x.total + (1-x.total)*x[item.strftime('%Y-%m')+'-F'], axis=1)
+            cost_data_table[item.strftime('%Y-%m')+'-cF']=cost_data_table.apply(lambda x: (x.total + (100-x.total)*x[item.strftime('%Y-%m')+'-F']), axis=1)
         else:
             cost_data_table[forecast_range[i].strftime('%Y-%m')+'-cF'] = (
                             cost_data_table.apply(
-                                lambda x: x[forecast_range[i-1].strftime('%Y-%m')+'-cF'] + (1-x.total)*x[item.strftime('%Y-%m')+'-F'], axis=1) 
+                                lambda x: x[forecast_range[i-1].strftime('%Y-%m')+'-cF'] + ((100-x.total)*x[item.strftime('%Y-%m')+'-F']), axis=1) 
                             )
     
     # cost_data_table['reporting_month']=cost_data_table.apply(lambda x: datetime.timestamp(x['reporting_month']), axis=1)

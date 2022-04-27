@@ -79,22 +79,25 @@ js_changed = JsCode("""function(e) {
     if (e.column.colId == "item_start_date") {
       rowNode.setDataValue("EAC", 77);
     }
+    
+
     };
 """)
 
 js_clicked = JsCode("""function(e) {
     console.log('cell clicked....!!!!!!');
-
-    console.log('column: ', e.column);
-    console.log('colDef: ', e.colDef);
-    console.log('value: ', e.value);
-    console.log('node: ', e.node);
-    console.log('data: ', e.data);
+/* 
     console.log('rowIndex: ', e.rowIndex);
     console.log('context: ', e.context);
     console.log('event: ', e);
     console.log('GridAPI: ', e.api);
     console.log('columnAPI: ', e.columnApi);
+*/    
+    console.log('column: ', e.column);
+    console.log('colDef: ', e.colDef);
+    console.log('value: ', e.value);
+    console.log('node: ', e.node);
+    console.log('data: ', e.data);
 
     console.log('id: ', e.node.id);
     console.log('leafGroup: ', e.node.leafGroup);

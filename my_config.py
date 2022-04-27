@@ -42,8 +42,8 @@ def page_config_and_session_state():
         st.session_state.date_range = None
     if 'period_selected' not in st.session_state:
         st.session_state.period_selected = False
-    if 'reporting_month' not in st.session_state:
-        st.session_state.reporting_month = ""
+    # if 'reporting_month' not in st.session_state:
+    #     st.session_state.reporting_month = ""
     if 'reporting_month_data_defined' not in st.session_state:
         st.session_state.reporting_month_data_defined = False
     if 'reporting_month_cost_data' not in st.session_state:
@@ -52,8 +52,8 @@ def page_config_and_session_state():
         st.session_state.cost_forecast_settings = None
     if 'cost_forecast_settings_defined' not in st.session_state:
         st.session_state.cost_forecast_settings_defined = False
-    if 'forecast_end_date' not in st.session_state:
-        st.session_state.forecast_end_date = None
+    # if 'forecast_end_date' not in st.session_state:
+    #     st.session_state.forecast_end_date = None
     if 'show_forecast_end_date' not in st.session_state:
         st.session_state.show_forecast_end_date = False
     if 'cost_data_table' not in st.session_state:

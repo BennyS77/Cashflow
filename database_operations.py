@@ -45,6 +45,7 @@ def write_table_to_database(report_data, table_name):
 
 
 ## 3
+# @st.experimental_memo()
 def read_table_from_database(table_name):
     # st.sidebar.write(f""" 3. READING table '{table_name}' from the database... """)
     my_query = 'SELECT * FROM "' + table_name+'"'
