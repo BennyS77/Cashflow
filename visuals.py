@@ -58,7 +58,7 @@ def bar_chart(months, cost, revenue, cashflow, no_of_actual_months):
             bordercolor='rgba(255, 255, 255, 0)',
             orientation='h',
             ),
-        width=1630,
+        width=1430,
         height=200,
         margin=dict(
             l=0,

@@ -8,6 +8,7 @@ from jscode import value_getter, forecast_percent_vgetter, editable, date_editab
 def config_actual_cost_children(firstMonth, lastMonth):
     actual_children=[{ 
         'headerName': '%',
+        'colId':'ACTD_percent',
         'columnGroupShow': 'closed',
         'suppressMenu':True,
         'minWidth': 60,
@@ -28,7 +29,7 @@ def config_actual_cost_children(firstMonth, lastMonth):
         'columnGroupShow': 'closed',
         # 'suppressMenu':True,
         'minWidth': 70,
-        'maxWidth': 80,
+        'maxWidth': 100,
         "aggFunc": "sum",
         "type": [
                 "numericColumn",
@@ -83,6 +84,7 @@ def config_actual_cost_children(firstMonth, lastMonth):
 def config_forecast_cost_children(report_date, end_date):
     forecast_children=[{
         'headerName': '%',
+        'colId':'ETC_percent',
         'columnGroupShow': 'closed',
         'suppressMenu':True,
         'minWidth': 60,
@@ -159,7 +161,7 @@ def config_forecast_cost_children(report_date, end_date):
 
 
 
-def configure_cost_grid_options(actual_children, forecast_children):
+def configure_cost_grid_options(actual_children, forecast_children, pinned_row_data):
   gridOptions={
     "defaultColDef": {
         "minWidth":80,
@@ -169,6 +171,14 @@ def configure_cost_grid_options(actual_children, forecast_children):
         "sortable": True,
     },
     "columnDefs": [
+      { 
+        "headerName": "TOTAL Column",
+        'field':'total_column',
+        "minWidth":140,
+        "maxWidth":140,
+        "hide":True,
+        'rowGroup':True,
+      },
       { 
         "headerName": "Division",
         "field": "Division",
@@ -191,6 +201,7 @@ def configure_cost_grid_options(actual_children, forecast_children):
       { "headerName": "Est. At Completion",
         "field": "EAC",
         'suppressMenu':True,
+        # 'editable':True,
         "cellClass": 'ag-right-aligned-cell',
         "aggFunc": "sum",
         "minWidth":135,
@@ -253,17 +264,19 @@ def configure_cost_grid_options(actual_children, forecast_children):
         }
     },
     # # "rowClassRules":row_class_rules,
-    # "pinnedTopRowData":pinnedRowData,
-    # "tooltipShowDelay":600,
+    # "pinnedTopRowData":pinned_row_data,
+    "tooltipShowDelay":600,
     # # 'rowHeight':55,
     # 'getRowHeight': row_height,
+    # 'getRowNodeId':'data.id',
     "onCellValueChanged": js_changed,
     "onCellClicked":js_clicked,
     # "onGridReady":when_grid_is_ready,
     "suppressAggFuncInHeader":True,
-    "groupIncludeFooter": True,
-    "groupIncludeTotalFooter": True,
+    # "groupIncludeFooter": True,
+    # "groupIncludeTotalFooter": True,
     'animateRows':True,
+    'enableCellChangeFlash':True,
     # 'enableCharts': True,
     'groupDefaultExpanded':True,
     # 'enableRangeSelection': True,

@@ -1,13 +1,17 @@
 import streamlit as st
 from datetime import datetime
 from st_aggrid import AgGrid
+import random
 import pandas as pd
+import numpy as np
+from visuals import bar_chart
 from dateutil.relativedelta import relativedelta
 from my_config import page_config_and_session_state
 from cashflow_functions import user_login, get_company, check_for_database_table, get_whole_cost_table, get_odata_list, get_cost_forecast_settings, display_cost_in_grid
 from cashflow_functions import fetch_Odata, get_cost_estimate_data, get_all_cost_data ,get_date_range, create_cost_data_for_reporting_month, create_cost_data_table, page_layout
 from database_operations import read_table_from_database, update_table, write_table_to_database
 from aggrid_functions_cost import config_actual_cost_children, config_forecast_cost_children, configure_cost_grid_options
+# from cost_data import calculate_pinned_row_data
 
 def get_company_list():
     # st.session_state.company_list = ['AA','BB',""]
@@ -113,7 +117,7 @@ def create_job_cost_data_table():
 page_config_and_session_state()
 page_layout()
 
-testing = True
+testing = False
 if testing:
     st.session_state.session_number += 1
     st.sidebar.markdown(f"#### Session Re-run: {st.session_state.session_number}")
@@ -152,18 +156,6 @@ if st.session_state.login_confirmed:
                 st.write(cost_data_table)
                 write_table_to_database(cost_data_table, table_name)
                 # st.experimental_rerun()
-                # ### FOR TESTING.... remove all remaining until 'else'
-                # st.session_state.job_data_table = cost_data_table
-                # st.session_state.reporting_month_list = st.session_state.job_data_table['reporting_month'].drop_duplicates().tolist()
-                # st.session_state.show_reporting_month = True
-                # if st.session_state.reporting_month != "":
-                #     """
-                #     ...REPORTING MONTH SELECTED...
-                #     """
-                #     st.session_state.grid_cost_data = st.session_state.job_data_table[st.session_state.job_data_table['reporting_month']==st.session_state.reporting_month]
-                #     st.session_state.grid_cost_data['item_start_date']=st.session_state.grid_cost_data.apply(lambda x: x['item_start_date'].strftime("%d/%m/%Y"), axis=1)
-                #     st.session_state.grid_cost_data['item_end_date'] = st.session_state.grid_cost_data.apply(lambda x: x['item_end_date'].strftime("%d/%m/%Y"), axis=1)
-                #     st.session_state.ready_for_grid = True
                 st.sidebar.button("rerun")
         else:
             """
@@ -203,14 +195,95 @@ if st.session_state.login_confirmed:
     ....GENERATE GRID....
     """
     if st.session_state.ready_for_grid:
+
+
+        """
+        ...Calculate Pinned Row Data...
+        """
+        st.session_state.grid_cost_data['total_amount'] = st.session_state.grid_cost_data.apply(lambda x: x.total*x.EAC/100, axis=1)
+        pinned_row_dict={
+            "autoGroup":"Total Costs:",
+            "EAC":st.session_state.grid_cost_data['EAC'].sum(),
+            "ACTD_percent":st.session_state.grid_cost_data['total_amount'].sum()/st.session_state.grid_cost_data['EAC'].sum()*100,
+            "ACTD_amount":st.session_state.grid_cost_data['total_amount'].sum(),
+            "ETC_percent":(1-(st.session_state.grid_cost_data['total_amount'].sum()/st.session_state.grid_cost_data['EAC'].sum()))*100,
+            "ETC_amount":st.session_state.grid_cost_data['EAC'].sum() - st.session_state.grid_cost_data['total_amount'].sum()
+        }
+
         first_cost_month = get_first_cost_month()
         forecast_end_date = st.session_state.grid_cost_data['item_end_date'].max()
+        last_actual_month = st.session_state.reporting_month+relativedelta(months=1)
+        my_range = pd.date_range(start=first_cost_month, end=last_actual_month, freq='M').tolist()
+        for i, item in enumerate(my_range):
+            coolness = st.session_state.grid_cost_data.apply(lambda x: x[item.strftime('%Y-%m')]*x.EAC, axis=1).sum()
+            pinned_row_dict.update({item.strftime('%Y-%m')+'-c':coolness/st.session_state.grid_cost_data.EAC.sum()*100})
+            pinned_row_dict.update({item.strftime('%Y-%m')+'-$':coolness})
+
+        first_forecast_month = st.session_state.reporting_month+relativedelta(months=1)
+        cool_range = pd.period_range(first_forecast_month, forecast_end_date, freq='M').tolist()
+        # forecast_date_range = pd.date_range(start = first_forecast_month, end = last_forecast_month, freq='M').tolist()
+        for i, item in enumerate(cool_range):
+            if i == 0:
+                coolness = st.session_state.grid_cost_data.apply(
+                        lambda x: (x[item.strftime('%Y-%m')+'-cF']-x['total'])/100*x.EAC, axis=1).sum()
+                pinned_row_dict.update({item.strftime('%Y-%m')+'-cF':coolness/st.session_state.grid_cost_data.EAC.sum()*100})
+                pinned_row_dict.update({item.strftime('%Y-%m')+'m$':coolness})
+            else:
+                coolness = st.session_state.grid_cost_data.apply(
+                        lambda x: (x[item.strftime('%Y-%m')+'-cF'] - x[cool_range[i-1].strftime('%Y-%m')+'-cF'] ) /100 *x.EAC, axis=1).sum()
+                pinned_row_dict.update({item.strftime('%Y-%m')+'-cF':coolness/st.session_state.grid_cost_data.EAC.sum()*100})
+                pinned_row_dict.update({item.strftime('%Y-%m')+'m$':coolness})
+
+
+        """
+        ...Calculate data for the graph...
+        """
+        def search(my_dict, search_string):
+            key_list = []
+            value_list = []
+            for key, value in my_dict.items():
+                if search_string in key:
+                    key_list.append(key[:7])
+                    value_list.append(value)
+            return key_list, value_list
         
+        all_months, all_cost_amounts = search(pinned_row_dict, '$')
+        number_of_months = len(all_months)
+
+        """ Generate some dummy revenue data"""
+        # if len(st.session_state.revenue_amounts)==0:
+        st.session_state.revenue_amounts = [item *  (0.8 + (random.random()*0.7)) for item in all_cost_amounts]
+
+        cashflow =[int(item1 - item2) for (item1, item2) in zip(st.session_state.revenue_amounts,all_cost_amounts)]
+        cum_cashflow = np.cumsum(cashflow)
+
+        fig = bar_chart(all_months, all_cost_amounts, st.session_state.revenue_amounts, cum_cashflow, number_of_months)
+        
+        # st.write('all_months')
+        # st.write(all_months)
+        # st.write('all_cost_amounts')
+        # st.write(all_cost_amounts)
+        # st.write('st.session_state.revenue_amounts')
+        # st.write(st.session_state.revenue_amounts)
+        # st.write('cashflow')
+        # st.write(cashflow)
+        # st.write('cum_cashflow')
+        # st.sidebar.write(cum_cashflow)
+
+
+        """
+        ...Display cashflow figure at the top...
+        """
+        st.plotly_chart(fig)
+
+
+        st.session_state.grid_cost_data['total_column']='TOTAL:'  ### For grouping purposes in the grid.
+
         actual_children = config_actual_cost_children(first_cost_month, st.session_state.reporting_month)
         forecast_children = config_forecast_cost_children(st.session_state.reporting_month+relativedelta(months=1), forecast_end_date)
-        grid_options = configure_cost_grid_options(actual_children, forecast_children)
-
-        # st.write(st.session_state.job_data_table)
+        grid_options = configure_cost_grid_options(actual_children, forecast_children, [pinned_row_dict])
+        # st.write(st.session_state.grid_cost_data)
+        # st.write(pinned_row_dict)
 
         grid_response = AgGrid(
                 dataframe = st.session_state.grid_cost_data,
@@ -220,6 +293,7 @@ if st.session_state.login_confirmed:
                 fit_columns_on_grid_load=True,
                 key = st.session_state.grid_key,
                 reload_data=False,  
+                # reload_data=True,  
                 data_return_mode='AS_INPUT',
                 update_mode='MODEL_CHANGED',
                 allow_unsafe_jscode=True,
@@ -241,7 +315,7 @@ if st.session_state.login_confirmed:
             where_column2 = 'reporting_month'
             value2 = "'"+st.session_state.reporting_month.strftime("%Y-%m-%dT%H:%M:%S")+"'"
             for key, value in dict_of_changes.items():
-                # st.session_state.grid_cost_data.loc[st.session_state.grid_cost_data[where_column] == cost_item_changed, key] = value
+                st.session_state.grid_cost_data.loc[st.session_state.grid_cost_data[where_column] == cost_item_changed, key] = value
                 column = '"'+key+'"'
                 if key == 'forecast_method':
                     value="'"+value+"'"
@@ -249,7 +323,7 @@ if st.session_state.login_confirmed:
                     value = datetime.strptime(value, "%d/%m/%Y")
                     value="'"+value.strftime("%Y-%m-%dT%H:%M:%S")+"'"
                 # update_table(table_name, column, str(value), where_column, "'"+cost_item_changed+"'", where_column2, value2)
-
+            st.experimental_rerun()
             # st.write(st.session_state.grid_cost_data)   
 
 
@@ -320,3 +394,21 @@ if st.sidebar.button("Clear all"):
 # st.sidebar.markdown(f"#### Reporting Month by end: {st.session_state.reporting_month}")
 
 # st.button("rerun")
+
+
+
+
+
+##### Suitable test jobs
+# Not much in Reitsma
+# Colibrico - not BE-21-47, BAL-22-05, BAL-21-35, BAL-21-02
+#           - suitable ''BAL-21-32'', BAL-21-30
+
+# PHASE - not C351, C354, R419
+#       - suitable LA007
+
+# Akura - not 846, 766, T1012D, 265, V974
+
+# Ecowise - not H00710, H760,
+
+# Neverstop - suitable NSG21-014

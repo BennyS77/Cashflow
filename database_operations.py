@@ -25,9 +25,9 @@ def write_table_to_database(report_data, table_name):
     for item in report_data.columns:
         dtype_dict.update({item:Float})
     dtype_dict.update({
-            "Division":String(40),
+            "Division":String(60),
             "cost_item":String(30),
-            "Cost_Item_Description":String(60),
+            "Cost_Item_Description":String(80),
             "reporting_month":DateTime,
             "item_start_date":DateTime,
             "item_end_date":String(25),
@@ -45,7 +45,6 @@ def write_table_to_database(report_data, table_name):
 
 
 ## 3
-# @st.experimental_memo()
 def read_table_from_database(table_name):
     # st.sidebar.write(f""" 3. READING table '{table_name}' from the database... """)
     my_query = 'SELECT * FROM "' + table_name+'"'

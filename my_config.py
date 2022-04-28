@@ -82,17 +82,13 @@ def page_config_and_session_state():
         st.session_state.show_reporting_month = False
     if 'reporting_month_list' not in st.session_state:
         st.session_state.reporting_month_list = []
-    
-
-  
-    
  
 
     # # if 'for_testing' not in st.session_state:
     # #     st.session_state.for_testing = False
  
-    # if 'revenue_amounts' not in st.session_state:
-    #     st.session_state.revenue_amounts = []
+    if 'revenue_amounts' not in st.session_state:
+        st.session_state.revenue_amounts = []
     
     return
 

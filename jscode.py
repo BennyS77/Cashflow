@@ -1,5 +1,7 @@
 from st_aggrid import JsCode
 
+
+
 actual_percent_vgetter = JsCode("""
     function(params) {
         if (params.node.group != true && params.node.rowPinned != 'top') {
@@ -8,9 +10,16 @@ actual_percent_vgetter = JsCode("""
         if (params.node.footer == true) {
             return (params.node.aggData.ACTD_amount / params.node.aggData.EAC*100)
         }
-        if (params.node.leafGroup == true && params.node.expanded == false ) {
+        if (params.node.leafGroup == true ) {
             return (params.node.aggData.ACTD_amount / params.node.aggData.EAC*100)
         }
+        if (params.node.rowPinned == 'top') {
+            return params.data.ACTD_percent
+        }
+        if (params.node.key === 'TOTAL:') {
+            return params.node.aggData.ACTD_amount / params.node.aggData.EAC*100
+        }
+
     };
 """)
 
@@ -23,10 +32,13 @@ actual_percent_vformatter = JsCode("""
         if (params.node.footer == true) {
             return parseFloat(params.value).toFixed(1)
         }
-        if (params.node.leafGroup == true && params.node.expanded == false ) {
+        if (params.node.leafGroup == true) {
             return parseFloat(params.value).toFixed(1)
         }
         if (params.node.rowPinned === 'top') {
+            return parseFloat(params.value).toFixed(1)
+        }
+        if (params.node.key === 'TOTAL:') {
             return parseFloat(params.value).toFixed(1)
         }
     };
@@ -38,6 +50,10 @@ actual_amount_vgetter = JsCode("""
         if (params.node.group != true && params.node.rowPinned != 'top') {
             return params.data.total/100*params.data.EAC
         }
+        if (params.node.rowPinned == 'top') {
+            return params.data.ACTD_amount
+        }
+
     };
 """)
 
@@ -53,10 +69,13 @@ value_formatter = JsCode("""
         if (params.node.footer == true) {
             return parseFloat(params.value).toLocaleString('en',{minimumFractionDigits: 0,  maximumFractionDigits: 0})
         }
-        if (params.node.leafGroup == true && params.node.expanded == false ) {
+        if (params.node.leafGroup == true) {
             return parseFloat(params.value).toLocaleString('en',{minimumFractionDigits: 0,  maximumFractionDigits: 0})
         }
         if (params.node.rowPinned === 'top') {
+            return parseFloat(params.value).toLocaleString('en',{minimumFractionDigits: 0,  maximumFractionDigits: 0})
+        }
+        if (params.node.key === 'TOTAL:') {
             return parseFloat(params.value).toLocaleString('en',{minimumFractionDigits: 0,  maximumFractionDigits: 0})
         }
     };
@@ -69,6 +88,19 @@ forecast_amount_vgetter = JsCode("""
         if (params.node.group != true && params.node.rowPinned != 'top') {
             return (100-params.data.total)/100*params.data.EAC
         }
+     /*   
+        if (params.node.rowPinned == 'top') {
+            let EAC_total = 0;
+            params.api.forEachLeafNode(calculate);  
+            console.log("EAC_total:", EAC_total);
+            return EAC_total;
+
+            function calculate(node, index) {
+                EAC_total = EAC_total + node.data.EAC;
+                return EAC_total
+            }
+        }
+    */
     };
 """)
 
@@ -80,8 +112,14 @@ forecast_percent_vgetter = JsCode("""
         if (params.node.footer == true) {
             return (params.node.aggData.ETC_amount / params.node.aggData.EAC*100)
         }
-        if (params.node.leafGroup == true && params.node.expanded == false ) {
+        if (params.node.leafGroup == true ) {
             return (params.node.aggData.ETC_amount / params.node.aggData.EAC*100)
+        }
+        if (params.node.rowPinned == 'top') {
+            return params.data.ETC_percent
+        }
+        if (params.node.key === 'TOTAL:') {
+            return params.node.aggData.ETC_amount / params.node.aggData.EAC*100
         }
     };
 """)
@@ -103,7 +141,7 @@ forecast_field_formatter = JsCode("""
 
  /*       console.log("this_month_amount_column", this_month_amount_column);   */
 
-        if (params.node.group != true) {
+        if (params.node.group != true && params.node.rowPinned != 'top') {
             var previous_cum_percentage = params.data[last_column_string.concat("-cF")];
             
             /** IF FIRST MONTH AND NO ACTIVITY --> CLEAR CELL **/
@@ -127,6 +165,13 @@ forecast_field_formatter = JsCode("""
             var to_display = params.node.aggData[this_month_amount_column] / params.node.aggData.EAC * 100;
             return parseFloat(to_display).toFixed(1);
         }
+        if (params.node.rowPinned == 'top') {
+            return parseFloat(params.value).toFixed(1);
+        }
+        if (params.node.key === 'TOTAL:') {
+            var to_display = params.node.aggData[this_month_amount_column] / params.node.aggData.EAC * 100;
+            return parseFloat(to_display).toFixed(1);
+        }
     }
 """)
 
@@ -143,8 +188,11 @@ amount_formatter = JsCode("""
         if (params.node.footer == true) {
                 return parseFloat(params.value).toLocaleString('en',{minimumFractionDigits: 0,  maximumFractionDigits: 0});
         }
-        if (params.node.leafGroup == true && params.node.expanded == false ) {
+        if (params.node.leafGroup == true ) {
                 return parseFloat(params.value).toLocaleString('en',{minimumFractionDigits: 0,  maximumFractionDigits: 0});
+        }
+        if (params.node.key === 'TOTAL:') {
+            return parseFloat(params.value).toLocaleString('en',{minimumFractionDigits: 0,  maximumFractionDigits: 0})
         }
 
     }
@@ -153,7 +201,7 @@ amount_formatter = JsCode("""
 
 forecast_amount_getter = JsCode("""
     function(params) {
-        if (params.node.group != true) {
+        if (params.node.group != true && params.node.rowPinned != 'top') {
     
             var this_date = new Date(params.column.colId.substr(0,7));
             var this_year = String(this_date.getFullYear());
@@ -176,10 +224,15 @@ forecast_amount_getter = JsCode("""
             else {
                 var amount = cum_percentage - params.data.total;
             }
-
             return amount/100 * params.data.EAC
-
         }
+
+        if (params.node.rowPinned == 'top') {
+            var this_month_id = params.column.colId.substring(0,7);
+            return params.data[this_month_id.concat('m$')]
+        }
+       
+
     };
 """)
 
@@ -324,7 +377,10 @@ percent_formatter = JsCode("""
         if (params.node.footer == true) {
             return parseFloat(params.node.aggData[new_col]/params.node.aggData.EAC*100).toFixed(1);
         }
-        if (params.node.leafGroup == true && params.node.expanded == false ) {
+        if (params.node.leafGroup == true) {
+            return parseFloat(params.node.aggData[new_col]/params.node.aggData.EAC*100).toFixed(1);
+        }
+        if (params.node.key === 'TOTAL:') {
             return parseFloat(params.node.aggData[new_col]/params.node.aggData.EAC*100).toFixed(1);
         }
   };
@@ -337,8 +393,11 @@ value_getter = JsCode("""
         /** if cumulative --> let col = this_month_id.concat("-c"); **/
         let col = this_month_id;
 
-        if (params.node.group != true) {
+        if (params.node.group != true && params.node.rowPinned != 'top') {
                 return params.data[col]*params.data.EAC
+        }
+        if (params.node.rowPinned == 'top') {
+            return params.data[this_month_id.concat('-$')]
         }
   };
   """)
