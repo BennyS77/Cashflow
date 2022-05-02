@@ -58,9 +58,9 @@ def user_login():
         st.session_state.credentials = {"username":st.session_state.client_id+'\\'+st.session_state.username, "password":st.session_state.password}
         return
     with st.sidebar.form(key='my_form', clear_on_submit=True):
-        st.text_input(label="client_id", key='client_id', value = '321081')
-        st.text_input(label="username", key='username', value = 'JP.API')
-        st.text_input('Password:', key='password', type="password", value = 'JQ24Ty3H4sr6A1PWa')
+        st.text_input(label="client_id", key='client_id') #, value = '319006')
+        st.text_input(label="username", key='username') #, value = 'JP.API')
+        st.text_input('Password:', key='password', type="password") #, value = 'tYzxU2fQuJvrVSgJ')
         st.form_submit_button("submit", on_click = confirm_login)
     return
 
@@ -74,10 +74,9 @@ def fetch_Odata(dataset, columns='*', filter=""):
     # user_auth = ('321081\JP.API',        'JQ24Ty3H4sr6A1PWa')    # Reitsma
     # user_auth = ('321078/KeypaySyncAPI', 'MACcB8xtNNJ65fk6')	# Phase3
     # user_auth = ('316006/KeypaySyncAPI', 'YRSCpA65hHRFRUmS')	# Akura/Wallandra
-    # user_auth = ('321059/KeypaySyncAPI', 'gXs6SwBkDTKmw8Hv')	# Colbrico Breakaway
-    # user_auth = ('811010/KeypaySyncAPI', 'cdVfcHHeHL5v2EzJ')	# Jonas Premier Test
     # user_auth = ('319029/KeypaySyncAPI', 'U4kT4tePBs2JqvKD')	# Ecowise
     # user_auth = ('319006/JP.API',	     'tYzxU2fQuJvrVSgJ')	# Neverstop
+    # user_auth = ('317016/BenStewart',	     'Zxcvbn123456')	# GWH
 
     response = requests.get(URL+query, auth = user_auth)
     # st.write(response.status_code)

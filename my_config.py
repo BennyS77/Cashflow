@@ -9,7 +9,6 @@ def page_config_and_session_state():
     """
         Set Page Configuration and Session State variables
     """
-
     st.set_page_config(
       page_title="Premier Reports - Cost Forecast",
       page_icon="bar-chart",

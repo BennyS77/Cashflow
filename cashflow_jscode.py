@@ -73,40 +73,70 @@ js_changed = JsCode("""function(e) {
     console.log('node: ', e.node);
     console.log('new value: ', e.newValue);
     console.log('column: ', e.column.colId);
+/*
+    console.log('api: ', api);
 
-    let rowNode = api.getRowNode(rowIndex);
-    
-    if (e.column.colId == "item_start_date") {
-      rowNode.setDataValue("EAC", 77);
-    }
-    
+    let rowNode = api.getDisplayedRowAtIndex(rowIndex);
+    let rowNode2 = api.getRowNode(rowIndex);
+    let change_columns = 'EAC';
+    console.log('lets flash:', rowNode, rowNode2);
+    api.redrawRows();
 
-    };
+    api.refreshCells({
+        force: true,  
+    });
+
+    api.flashCells({
+        rowNodes: [rowNode],
+        columns: ['EAC'],
+        flashDelay: 350
+        });
+*/
+};
 """)
 
+
 js_clicked = JsCode("""function(e) {
+  /* USE 'LET' TO DECLARE VARIABLES */
     console.log('cell clicked....!!!!!!');
-/* 
+/*
     console.log('rowIndex: ', e.rowIndex);
     console.log('context: ', e.context);
     console.log('event: ', e);
     console.log('GridAPI: ', e.api);
     console.log('columnAPI: ', e.columnApi);
-*/    
+   
     console.log('column: ', e.column);
     console.log('colDef: ', e.colDef);
     console.log('value: ', e.value);
     console.log('node: ', e.node);
     console.log('data: ', e.data);
-
+*/
     console.log('id: ', e.node.id);
+    console.log('row index: ', e.node.rowIndex);
     console.log('leafGroup: ', e.node.leafGroup);
     console.log('footer: ', e.node.footer);
     console.log('expanded: ', e.node.expanded);
     console.log('group: ', e.node.group);
     console.log('col_id: ', e.column.colId);
     console.log('col_field: ', e.colDef.field);
-    };
+/*
+    let my_node = e.api.getRowNode('5');
+    console.log('my_node!!!: ', my_node);
+
+    let EAC_total = 0;
+    e.api.forEachLeafNode(print_node);
+    console.log("EAC_total:", EAC_total);
+
+
+    function print_node(node, index) {
+        console.log("EAC:", node.data.EAC); 
+        EAC_total = EAC_total + node.data.EAC;
+        return EAC_total
+    }
+*/
+
+}
 """)
 
 row_height = JsCode("""

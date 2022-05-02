@@ -1,5 +1,17 @@
 from st_aggrid import JsCode
 
+my_renderer = JsCode("""
+    function(params) {
+        return `<span style="margin-left: 80px">${params.value}</span>`;
+    }
+""")
+
+column_combiner = JsCode("""
+    function(params) {
+        return params.data.cost_item.concat(" ").concat(params.data.Cost_Item_Description);
+    }
+""")
+
 
 
 actual_percent_vgetter = JsCode("""

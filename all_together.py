@@ -117,15 +117,35 @@ def create_job_cost_data_table():
 page_config_and_session_state()
 page_layout()
 
-testing = False
+testing = True
+
 if testing:
     st.session_state.session_number += 1
     st.sidebar.markdown(f"#### Session Re-run: {st.session_state.session_number}")
-    st.session_state.credentials = {"username":'321081\JP.API', "password":'JQ24Ty3H4sr6A1PWa'}
+    st.session_state.credentials = {"username":'319006\JP.API', "password":'tYzxU2fQuJvrVSgJ'}
     st.session_state.login_confirmed = True
-    # st.session_state.company_list = ['RC', ""]
-    # st.session_state.company = 'RC'
-    # st.session_state.job = '20-4075'
+    st.session_state.company_list = ['NS', ""]
+    st.session_state.company = 'NS'
+    st.session_state.job = 'NSG21-010'
+    if 'reporting_month' not in st.session_state:
+        st.session_state.reporting_month = ''
+    
+
+col1,col2,col3,col4 = st.columns([1,1,1,1])
+with col1:
+    start_date = st.empty()
+    start_date.markdown("Start Date:")
+with col2:
+    end_date = st.empty()
+    end_date.markdown("End Date:")
+with col3:
+    margin = st.empty()
+    margin.markdown("Margin:")
+with col4:
+    project_manager = st.empty()
+    project_manager.markdown("Project Manager:")
+
+
 
 if st.session_state.login_confirmed:
     """
@@ -274,7 +294,8 @@ if st.session_state.login_confirmed:
         """
         ...Display cashflow figure at the top...
         """
-        st.plotly_chart(fig)
+        config = {'displayModeBar':False}
+        st.plotly_chart(fig, config=config, use_container_width=True)
 
 
         st.session_state.grid_cost_data['total_column']='TOTAL:'  ### For grouping purposes in the grid.
@@ -284,6 +305,12 @@ if st.session_state.login_confirmed:
         grid_options = configure_cost_grid_options(actual_children, forecast_children, [pinned_row_dict])
         # st.write(st.session_state.grid_cost_data)
         # st.write(pinned_row_dict)
+
+        col1, col2 = st.columns([1,1])
+        with col1:
+            st.markdown("## COST")
+        with col2:
+            st.markdown("## REVENUE")
 
         grid_response = AgGrid(
                 dataframe = st.session_state.grid_cost_data,
@@ -322,7 +349,7 @@ if st.session_state.login_confirmed:
                 elif key == 'item_start_date' or key == 'item_end_date':
                     value = datetime.strptime(value, "%d/%m/%Y")
                     value="'"+value.strftime("%Y-%m-%dT%H:%M:%S")+"'"
-                # update_table(table_name, column, str(value), where_column, "'"+cost_item_changed+"'", where_column2, value2)
+                update_table(table_name, column, str(value), where_column, "'"+cost_item_changed+"'", where_column2, value2)
             st.experimental_rerun()
             # st.write(st.session_state.grid_cost_data)   
 
@@ -411,4 +438,4 @@ if st.sidebar.button("Clear all"):
 
 # Ecowise - not H00710, H760,
 
-# Neverstop - suitable NSG21-014
+# Neverstop - suitable 'NSG21-010', NSG21-014,

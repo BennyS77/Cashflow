@@ -52,13 +52,14 @@ def bar_chart(months, cost, revenue, cashflow, no_of_actual_months):
         xaxis_tickangle=0,
         # title_text='Cashflow graph',
         legend=dict(
-            x=0.84,
+            x=0.79,
             y=1.2,
             bgcolor='rgba(255, 255, 255, 0)',
             bordercolor='rgba(255, 255, 255, 0)',
             orientation='h',
             ),
-        width=1430,
+        # width=1630,
+        # autosize=True,
         height=200,
         margin=dict(
             l=0,

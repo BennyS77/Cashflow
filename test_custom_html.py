@@ -3,6 +3,35 @@ import streamlit as st
 st.sidebar.write('test')
 st.sidebar.text_input('input')
 
+#----------------------Hide Streamlit Hamburger Menu and footer----------------------------
+hide_menu_footer = """
+    <style>
+    #MainMenu {visibility: hidden;}
+    footer {visibility: hidden;}
+    </style>
+"""
+st.markdown(hide_menu_footer, unsafe_allow_html=True)
+#--------------------------------------------------------------------
+
+markdown_container_style = """
+<style>
+.css-pbov4q {
+    font-size: 1rem;
+    font-weight: 400;
+    line-height: 1.6;
+    text-size-adjust: 100%;
+    -webkit-tap-highlight-color: rgba(0, 0, 0, 0);
+    -webkit-font-smoothing: auto;
+    color: rgb(33, 37, 41);
+    box-sizing: border-box;
+    font-family: "Source Sans Pro", sans-serif;
+    background-color: rgb(150, 150, 255);
+    margin-bottom: -1rem;
+}
+</style>
+"""
+
+
 st.markdown("""
 <style>
 .css-fg4pbf {

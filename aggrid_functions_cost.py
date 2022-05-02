@@ -2,7 +2,7 @@ import streamlit as st
 from dateutil.relativedelta import relativedelta
 import pandas as pd
 from cashflow_jscode import js_changed, js_clicked, row_height, col_span
-from jscode import date_getter, my_setter, date_setter, forecast_amount_getter, forecast_field_formatter, amount_formatter, percent_formatter, forecast_amount_vgetter
+from jscode import date_getter, my_renderer, column_combiner, my_setter, date_setter, forecast_amount_getter, forecast_field_formatter, amount_formatter, percent_formatter, forecast_amount_vgetter
 from jscode import value_getter, forecast_percent_vgetter, editable, date_editable, value_formatter, actual_amount_vgetter, actual_percent_vgetter, actual_percent_vformatter
 
 def config_actual_cost_children(firstMonth, lastMonth):
@@ -190,13 +190,24 @@ def configure_cost_grid_options(actual_children, forecast_children, pinned_row_d
       { "headerName": "Cost Item",
         "field": "cost_item",
         "headerTooltip":"The Cost Item code",
+        'cellRenderer':my_renderer,
+        "hide":True,
+        "minWidth":130,
+        "maxWidth":140,
         'suppressMenu':True,
+      },
+      { "headerName": 'Cost Item',
+        'cellRenderer':my_renderer,
+        "minWidth":230,
+        "maxWidth":310,
+        'valueGetter':column_combiner
       },
       { 
         "field": "Cost_Item_Description",
         "headerName": "Description",
+        "hide":True,
         "minWidth":150,
-        "maxWidth":150,
+        "maxWidth":190,
       },
       { "headerName": "Est. At Completion",
         "field": "EAC",
@@ -216,7 +227,7 @@ def configure_cost_grid_options(actual_children, forecast_children, pinned_row_d
         "headerTooltip":"Choose a forecasting method",
         "editable": True,
         "cellEditor": 'agRichSelectCellEditor',
-        "cellEditorParams": {'values': ['Timeline', 'Manual','S-curve'],},
+        "cellEditorParams": {'values': ['Timeline', 'Manual'],},
       },
       { 
         "headerName": "Start Date",
@@ -278,6 +289,7 @@ def configure_cost_grid_options(actual_children, forecast_children, pinned_row_d
     'animateRows':True,
     'enableCellChangeFlash':True,
     # 'enableCharts': True,
+    'groupDisplayType':'groupRows',
     'groupDefaultExpanded':True,
     # 'enableRangeSelection': True,
   }
